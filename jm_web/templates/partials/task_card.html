@@ -1,0 +1,57 @@
+<!-- 单个任务卡片 (HTMX partial) -->
+<div class="card bg-dark border-secondary h-100" id="task-{{ task.task_id }}">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between align-items-start mb-1">
+            <div>
+                <small class="text-info fw-bold">JM{{ task.album_id }}</small>
+                {% if task.title %}
+                <small class="text-light d-block text-truncate">{{ task.title }}</small>
+                {% endif %}
+            </div>
+            <span class="badge
+                {{ 'bg-warning text-dark' if task.status == 'pending' }}
+                {{ 'bg-info text-dark' if task.status == 'running' }}
+                {{ 'bg-primary' if task.status == 'processing' }}
+                {{ 'bg-success' if task.status == 'completed' }}
+                {{ 'bg-danger' if task.status == 'failed' }}
+                {{ 'bg-secondary' if task.status == 'cancelled' }}
+            ">
+                {{ {
+                    'pending': '等待',
+                    'running': '初始化',
+                    'processing': '下载中',
+                    'completed': '完成',
+                    'failed': '失败',
+                    'cancelled': '已取消',
+                }.get(task.status, task.status) }}
+            </span>
+        </div>
+
+        {% if task.status in ('processing', 'completed') and task.total_images > 0 %}
+        <div class="progress mb-1" style="height: 6px">
+            <div class="progress-bar {{ 'bg-success' if task.status == 'completed' else 'progress-bar-striped progress-bar-animated bg-info' }}"
+                 style="width: {{ task.image_percent }}%"></div>
+        </div>
+        <small class="text-secondary">
+            {{ task.current_image }}/{{ task.total_images }} 图片 — {{ task.image_percent }}%
+        </small>
+        {% elif task.status == 'failed' %}
+        <small class="text-danger">{{ task.error[:100] }}</small>
+        {% elif task.status == 'completed' %}
+        <small class="text-success">✅ 完成</small>
+        {% endif %}
+
+        {% if task.status in ('pending', 'running', 'processing') %}
+        <button class="btn btn-outline-warning btn-sm mt-1"
+                onclick="fetch('/download/api/tasks/{{ task.task_id }}/cancel', {method:'POST'})">
+            取消
+        </button>
+        {% endif %}
+        {% if task.status in ('completed', 'failed', 'cancelled') %}
+        <button class="btn btn-outline-danger btn-sm mt-1"
+                onclick="fetch('/download/api/tasks/{{ task.task_id }}', {method:'DELETE'})">
+            清除
+        </button>
+        {% endif %}
+    </div>
+</div>

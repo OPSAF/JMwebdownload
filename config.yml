@@ -1,0 +1,27 @@
+client:
+  cache: null
+  domain: []
+  impl: api
+  postman:
+    meta_data:
+      headers: null
+      impersonate: chrome
+      proxies: null
+    type: curl_cffi
+  retry_times: 5
+dir_rule:
+  base_dir: C:\Users\27862\Documents\trae_projects\JMD\downloads
+  normalize_zh: null
+  rule: Bd_Pname
+download:
+  cache: true
+  image:
+    decode: true
+    suffix: null
+  threading:
+    image: 8
+    photo: 4
+log: true
+plugins:
+  valid: log
+version: '2.1'

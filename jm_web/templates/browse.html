@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}搜索浏览 — JM Downloader{% endblock %}
+{% block page_class %}browse{% endblock %}
+{% block content %}
+
+<div x-data="browseApp()" x-init="init()">
+    <!-- 搜索栏 + 分类切换 -->
+    <div class="row mb-3">
+        <div class="col-lg-8">
+            <!-- Tab 切换 -->
+            <ul class="nav nav-pills mb-3">
+                <li class="nav-item">
+                    <button class="nav-link" :class="mode === 'search' ? 'active' : ''"
+                            @click="mode = 'search'; page = 1; doSearch()">🔍 搜索</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" :class="mode === 'rankings' ? 'active' : ''"
+                            @click="mode = 'rankings'; page = 1; doRankings()">📊 排行榜</button>
+                </li>
+            </ul>
+
+            <!-- 搜索模式 -->
+            <div x-show="mode === 'search'">
+                <div class="input-group">
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           placeholder="搜索关键字、标签..." x-model="searchQuery"
+                           @keyup.enter="page = 1; doSearch()">
+                    <button class="btn btn-warning" @click="page = 1; doSearch()"
+                            :disabled="loading">
+                        <span x-show="!loading">搜索</span>
+                        <span x-show="loading" class="spinner-border spinner-border-sm"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 排行榜模式 -->
+            <div x-show="mode === 'rankings'" class="d-flex gap-2 flex-wrap">
+                <select class="form-select bg-dark text-light border-secondary w-auto" x-model="rankTime" style="max-width:120px">
+                    <option value="ALL">全部时间</option>
+                    <option value="TODAY">今日</option>
+                    <option value="WEEK" selected>本周</option>
+                    <option value="MONTH">本月</option>
+                </select>
+                <select class="form-select bg-dark text-light border-secondary w-auto" x-model="rankOrder" style="max-width:120px">
+                    <option value="VIEW" selected>按观看</option>
+                    <option value="LIKE">按点赞</option>
+                    <option value="LATEST">按最新</option>
+                </select>
+                <button class="btn btn-info" @click="page = 1; doRankings()"
+                        :disabled="loading">
+                    <span x-show="!loading">刷新</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果区域 (HTMX 加载) -->
+    <div id="search-results-area"
+         hx-get=""
+         hx-trigger="load"
+         x-init="$el.setAttribute('hx-get',
+             mode === 'search'
+               ? `/browse/search-results?q=${searchQuery}&page=${page}`
+               : `/browse/rankings?time=${rankTime}&category=CATEGORY_ALL&order_by=${rankOrder}&page=${page}`
+         )">
+        <div class="text-center py-5 text-secondary">
+            <div class="spinner-border"></div>
+            <p class="mt-2">加载中...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function browseApp() {
+    return {
+        mode: 'search',
+        searchQuery: '',
+        page: 1,
+        rankTime: 'WEEK',
+        rankOrder: 'VIEW',
+        loading: false,
+
+        init() {
+            // 默认加载热搜/最新内容
+            this.doSearch();
+        },
+
+        doSearch() {
+            this.loading = true;
+            const area = document.getElementById('search-results-area');
+            const q = encodeURIComponent(this.searchQuery || '');
+            area.setAttribute('hx-get', `/browse/search-results?q=${q}&page=${this.page}`);
+            htmx.process(area);
+            htmx.trigger(area, 'htmx-get');
+            this.loading = false;
+        },
+
+        doRankings() {
+            this.loading = true;
+            const area = document.getElementById('search-results-area');
+            area.setAttribute('hx-get',
+                `/browse/rankings?time=${this.rankTime}&category=CATEGORY_ALL&order_by=${this.rankOrder}&page=${this.page}`);
+            htmx.process(area);
+            htmx.trigger(area, 'htmx-get');
+            this.loading = false;
+        },
+    };
+}
+</script>
+{% endblock %}

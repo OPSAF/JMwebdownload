@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}本子详情 — JM Downloader{% endblock %}
+{% block content %}
+
+<div x-data="albumDetail('{{ album_id }}')" x-init="load()">
+    <!-- 加载中 -->
+    <div x-show="loading" class="text-center py-5">
+        <div class="spinner-border text-warning"></div>
+        <p class="mt-2 text-secondary">正在加载本子信息...</p>
+    </div>
+
+    <!-- 错误 -->
+    <div x-show="error" class="alert alert-danger" x-text="error"></div>
+
+    <!-- 本子信息 -->
+    <div x-show="data" x-transition>
+        <div class="row">
+            <div class="col-lg-9">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-info">首页</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('search.index') }}" class="text-info">浏览</a></li>
+                        <li class="breadcrumb-item active text-light" x-text="data.title"></li>
+                    </ol>
+                </nav>
+
+                <div class="card bg-dark-subtle border-secondary mb-3">
+                    <div class="card-body">
+                        <h3 class="card-title text-info" x-text="data.title"></h3>
+                        <p class="text-secondary">
+                            <span class="me-3">🆔 <span x-text="data.album_id"></span></span>
+                            <span class="me-3">✍️ <span x-text="data.author || '未知'"></span></span>
+                            <span class="me-3">📅 <span x-text="data.publish_date || '未知'"></span></span>
+                        </p>
+                        <p class="text-secondary">
+                            👀 <span x-text="data.view_count || '-'"></span> &nbsp;
+                            ❤️ <span x-text="data.like_count || '-'"></span> &nbsp;
+                            💬 <span x-text="data.comment_count || '-'"></span> &nbsp;
+                            📄 <span x-text="data.total_photos"></span> 章
+                        </p>
+                        <p class="mb-2"><small class="text-muted">🏷️ <span x-text="data.tags || '无'"></span></small></p>
+
+                        <!-- 下载按钮 -->
+                        <div class="mt-3">
+                            <button class="btn btn-success"
+                                    @click="startDownload()" :disabled="downloading">
+                                <i class="bi bi-download"></i>
+                                <span x-show="!downloading">下载整本</span>
+                                <span x-show="downloading" class="spinner-border spinner-border-sm"></span>
+                            </button>
+                            <div x-show="dlMsg" class="mt-2" :class="dlOk ? 'text-success' : 'text-danger'" x-text="dlMsg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 章节列表 -->
+                <div class="card bg-dark-subtle border-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">📑 章节列表 (<span x-text="data.photos?.length"></span>)</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="list-group list-group-flush bg-dark">
+                            <template x-for="(photo, idx) in data.photos">
+                                <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <span class="badge bg-secondary me-2" x-text="idx + 1"></span>
+                                        <span x-text="photo.title || '第'+(idx+1)+'话'"></span>
+                                    </span>
+                                    <button class="btn btn-outline-success btn-sm"
+                                            @click="downloadPhoto(photo.photo_id, photo.title)">
+                                        <i class="bi bi-download"></i> 下载此章
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 侧栏：封面 -->
+            <div class="col-lg-3">
+                <div class="card bg-dark-subtle border-secondary sticky-top" style="top: 1rem">
+                    <div class="card-body text-center">
+                        <h6 class="text-secondary mb-2">封面</h6>
+                        <!-- 禁漫封面需要特殊处理，这里用 placeholder -->
+                        <div class="rounded bg-dark d-flex align-items-center justify-content-center"
+                             style="height: 280px">
+                            <i class="bi bi-image text-secondary" style="font-size: 4rem"></i>
+                        </div>
+                        <p class="mt-2 mb-0">
+                            <small class="text-muted" x-text="'JM' + data.album_id"></small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function albumDetail(albumId) {
+    return {
+        data: null,
+        loading: true,
+        error: '',
+        downloading: false,
+        dlMsg: '',
+        dlOk: false,
+
+        async load() {
+            try {
+                const resp = await fetch(`/browse/api/album/${albumId}`);
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.error || '请求失败');
+                }
+                this.data = await resp.json();
+            } catch (e) {
+                this.error = e.message;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async startDownload() {
+            this.downloading = true;
+            this.dlMsg = '';
+            try {
+                const resp = await fetch('/download/api/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        album_id: albumId,
+                        export_formats: [],  // 不需要自动导出
+                    }),
+                });
+                const result = await resp.json();
+                if (result.task_id) {
+                    this.dlOk = true;
+                    this.dlMsg = `✅ 下载任务已创建: ${result.task_id}`;
+                    window.TaskManager.startTracking(result.task_id, this.data?.title || albumId);
+                }
+            } catch (e) {
+                this.dlOk = false;
+                this.dlMsg = `❌ ${e.message}`;
+            } finally {
+                this.downloading = false;
+            }
+        },
+
+        async downloadPhoto(photoId, title) {
+            try {
+                const resp = await fetch('/download/api/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({album_id: photoId}),
+                });
+                const result = await resp.json();
+                if (result.task_id) {
+                    showToast('success', `开始下载: ${title || photoId}`);
+                }
+            } catch (e) {
+                showToast('error', `下载失败: ${e.message}`);
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

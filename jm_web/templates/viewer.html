@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}预览 — JM Downloader{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-info">首页</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('files.index') }}" class="text-info">文件</a></li>
+        <li class="breadcrumb-item active text-light">{{ filepath }}</li>
+    </ol>
+</nav>
+
+{% if file_type == 'image' %}
+<div class="text-center">
+    <img src="{{ url_for('files.serve_file', filepath=filepath) }}"
+         class="img-fluid rounded" style="max-height: 85vh" alt="{{ filepath }}">
+    <div class="mt-2">
+        <a href="{{ url_for('files.serve_file', filepath=filepath) }}" download
+           class="btn btn-outline-light btn-sm">
+            <i class="bi bi-download"></i> 下载原图
+        </a>
+    </div>
+</div>
+
+{% elif file_type == 'pdf' %}
+<div class="ratio" style="--bs-aspect-ratio: 130%; min-height: 80vh">
+    <iframe src="{{ url_for('files.serve_file', filepath=filepath) }}#toolbar=1"
+            class="rounded" width="100%" height="100%"></iframe>
+</div>
+
+{% elif file_type == 'zip' %}
+<div class="card bg-dark-subtle border-secondary">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-file-zip text-warning"></i> {{ filepath }}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush bg-dark" style="max-height: 70vh; overflow-y: auto">
+            {% for f in zip_files %}
+            <div class="list-group-item bg-dark-subtle text-light border-secondary py-1">
+                <small>{{ f }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">不支持预览此文件类型</div>
+{% endif %}
+
+{% endblock %}

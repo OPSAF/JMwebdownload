@@ -1,0 +1,22 @@
+<!-- 章节列表 (HTMX partial) -->
+{% if photos %}
+<div class="list-group list-group-flush bg-dark">
+    {% for photo in photos %}
+    <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center">
+        <div>
+            <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+            <span>{{ photo.title or '第' ~ loop.index ~ '话' }}</span>
+            <small class="text-muted ms-2">ID: {{ photo.photo_id }}</small>
+        </div>
+        <button class="btn btn-outline-success btn-sm"
+                onclick="fetch('/download/api/start', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:'{{ photo.photo_id }}'})}).then(r=>r.json()).then(d=>{if(d.task_id)showToast('success','已添加下载: {{ photo.title or photo.photo_id }}');else showToast('error',d.error)})">
+            <i class="bi bi-download"></i> 下载
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-3 text-secondary">
+    <i class="bi bi-folder-x"></i> 暂无章节信息
+</div>
+{% endif %}

@@ -1,0 +1,6 @@
+flask>=3.0
+jmcomic>=2.6
+pillow
+img2pdf
+zhconv
+pyyaml

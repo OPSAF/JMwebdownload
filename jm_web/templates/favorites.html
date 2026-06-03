@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}收藏夹 — JM Downloader{% endblock %}
+{% block page_class %}favorites{% endblock %}
+{% block content %}
+
+<div x-data="favoritesApp()">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card bg-dark-subtle border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-heart text-danger"></i> 我的收藏</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success" @click="exportCSV()" :disabled="exporting">
+                            <i class="bi bi-download"></i> 导出 CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- 未登录提示 -->
+                    <div x-show="!loggedIn" class="text-center py-4">
+                        <i class="bi bi-lock text-secondary" style="font-size: 3rem"></i>
+                        <p class="mt-2 text-secondary">请先登录以查看收藏夹</p>
+                    </div>
+
+                    <!-- 收藏列表 -->
+                    <div x-show="loggedIn && items.length > 0">
+                        <div class="list-group list-group-flush rounded bg-dark">
+                            <template x-for="item in items">
+                                <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-secondary me-2" x-text="item.id"></span>
+                                        <span x-text="item.title"></span>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a :href="'/browse/album/' + item.id" class="btn btn-outline-info">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                        <button class="btn btn-outline-success"
+                                                @click="downloadAlbum(item.id, item.title)">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- 分页 -->
+                        <nav class="mt-3" x-show="totalPages > 1">
+                            <ul class="pagination pagination-sm justify-content-center">
+                                <li class="page-item" :class="{disabled: page <= 1}">
+                                    <button class="page-link bg-dark text-light border-secondary"
+                                            @click="loadPage(page - 1)">上一页</button>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link bg-dark text-light border-secondary"
+                                          x-text="`${page} / ${totalPages}`"></span>
+                                </li>
+                                <li class="page-item" :class="{disabled: page >= totalPages}">
+                                    <button class="page-link bg-dark text-light border-secondary"
+                                            @click="loadPage(page + 1)">下一页</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+
+                    <!-- 空收藏夹 -->
+                    <div x-show="loggedIn && items.length === 0 && !loading" class="text-center py-4 text-secondary">
+                        <p>收藏夹为空</p>
+                    </div>
+
+                    <!-- 加载中 -->
+                    <div x-show="loading" class="text-center py-3">
+                        <div class="spinner-border spinner-border-sm text-secondary"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 侧栏：登录 -->
+        <div class="col-lg-4">
+            <div class="card bg-dark-subtle border-secondary">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person"></i> 登录禁漫</h6>
+                </div>
+                <div class="card-body">
+                    <div x-show="loggedIn" class="text-success mb-2">
+                        <i class="bi bi-check-circle-fill"></i> 已登录
+                    </div>
+                    <form @submit.prevent="login()">
+                        <div class="mb-2">
+                            <input type="text" class="form-control bg-dark text-light border-secondary"
+                                   placeholder="用户名" x-model="username" required>
+                        </div>
+                        <div class="mb-2">
+                            <input type="password" class="form-control bg-dark text-light border-secondary"
+                                   placeholder="密码" x-model="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" :disabled="loginLoading">
+                            <span x-show="!loginLoading">登录</span>
+                            <span x-show="loginLoading" class="spinner-border spinner-border-sm"></span>
+                        </button>
+                    </form>
+                    <div x-show="loginMsg" class="mt-2 alert py-1" :class="loginOk ? 'alert-success' : 'alert-danger'"
+                         x-text="loginMsg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function favoritesApp() {
+    return {
+        loggedIn: false,
+        username: '',
+        password: '',
+        loginLoading: false,
+        loginMsg: '',
+        loginOk: false,
+        items: [],
+        page: 1,
+        totalPages: 1,
+        loading: false,
+        exporting: false,
+
+        async login() {
+            this.loginLoading = true;
+            this.loginMsg = '';
+            try {
+                const resp = await fetch('/favorites/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: this.username, password: this.password}),
+                });
+                const result = await resp.json();
+                this.loginOk = resp.ok;
+                this.loginMsg = result.message || result.error;
+                if (resp.ok) {
+                    this.loggedIn = true;
+                    this.loadPage(1);
+                }
+            } catch (e) {
+                this.loginOk = false;
+                this.loginMsg = `请求失败: ${e.message}`;
+            } finally {
+                this.loginLoading = false;
+            }
+        },
+
+        async loadPage(p) {
+            this.loading = true;
+            this.page = p;
+            try {
+                const resp = await fetch(`/favorites/api/list?page=${p}`);
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    if (err.error && err.error.includes('登录')) {
+                        this.loggedIn = false;
+                        this.loginMsg = '请先登录';
+                        this.loginOk = false;
+                    }
+                    throw new Error(err.error || '请求失败');
+                }
+                const data = await resp.json();
+                this.items = data.items || [];
+                this.totalPages = data.total_pages || 1;
+                this.loggedIn = true;
+            } catch (e) {
+                console.error(e);
+                this.items = [];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async downloadAlbum(id, title) {
+            try {
+                const resp = await fetch('/download/api/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({album_id: id}),
+                });
+                const result = await resp.json();
+                if (result.task_id) {
+                    showToast('success', `已添加下载: ${title || id}`);
+                    window.TaskManager.startTracking(result.task_id, title || id);
+                }
+            } catch (e) {
+                showToast('error', `下载失败: ${e.message}`);
+            }
+        },
+
+        async exportCSV() {
+            this.exporting = true;
+            try {
+                window.open('/favorites/api/export', '_blank');
+            } finally {
+                this.exporting = false;
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

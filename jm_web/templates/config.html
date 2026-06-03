@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}配置 — JM Downloader{% endblock %}
+{% block page_class %}config{% endblock %}
+{% block content %}
+
+<div x-data="configApp()" x-init="loadConfig()">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card bg-dark-subtle border-secondary mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-gear text-info"></i> YAML 配置编辑器</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-warning" @click="resetConfig()">
+                            <i class="bi bi-arrow-counterclockwise"></i> 重置
+                        </button>
+                        <button class="btn btn-sm btn-success ms-1" @click="saveConfig()" :disabled="saving">
+                            <span x-show="!saving"><i class="bi bi-check-lg"></i> 保存</span>
+                            <span x-show="saving" class="spinner-border spinner-border-sm"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <textarea id="config-editor" class="form-control bg-dark text-light border-0 font-monospace"
+                              style="min-height: 500px; font-size: 0.85rem; resize: vertical;"
+                              x-model="content" spellcheck="false"></textarea>
+                </div>
+                <div class="card-footer">
+                    <div x-show="msg" class="alert py-1 mb-0" :class="ok ? 'alert-success' : 'alert-danger'"
+                         x-text="msg"></div>
+                    <small class="text-muted">
+                        文件路径: <code x-text="configPath"></code> &bull;
+                        修改后保存即时生效（清除客户端缓存）
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- 域名测试 -->
+            <div class="card bg-dark-subtle border-secondary mb-3" x-data="domainTester()">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-globe text-warning"></i> 域名连通性测试</h6>
+                </div>
+                <div class="card-body">
+                    <textarea class="form-control bg-dark text-light border-secondary mb-2"
+                              rows="4" placeholder="每行一个域名，留空使用默认列表" x-model="domains"></textarea>
+                    <button class="btn btn-warning btn-sm w-100" @click="testDomains()" :disabled="testing">
+                        <span x-show="!testing"><i class="bi bi-speedometer2"></i> 测试</span>
+                        <span x-show="testing" class="spinner-border spinner-border-sm"></span>
+                    </button>
+                    <div x-show="results" class="mt-2">
+                        <template x-for="(status, domain) in results">
+                            <div class="d-flex justify-content-between py-1 border-bottom border-secondary">
+                                <span class="text-light" x-text="domain"></span>
+                                <span class="badge" :class="status === 'ok' ? 'bg-success' : 'bg-danger'"
+                                      x-text="status"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 环境信息 -->
+            <div class="card bg-dark-subtle border-secondary">
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> 环境信息</h6></div>
+                <div class="card-body text-secondary small">
+                    <p class="mb-1">下载目录: <code>{{ get_download_dir() }}</code></p>
+                    <p class="mb-0" x-text="'配置文件: ' + configPath"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function configApp() {
+    return {
+        content: '',
+        configPath: '',
+        saving: false,
+        msg: '',
+        ok: false,
+
+        async loadConfig() {
+            try {
+                const resp = await fetch('/config/api/get');
+                const data = await resp.json();
+                this.content = data.content;
+                this.configPath = data.path;
+            } catch (e) {
+                this.msg = `加载失败: ${e.message}`;
+                this.ok = false;
+            }
+        },
+
+        async saveConfig() {
+            this.saving = true;
+            this.msg = '';
+            try {
+                const resp = await fetch('/config/api/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: this.content}),
+                });
+                const result = await resp.json();
+                this.ok = resp.ok;
+                this.msg = result.message || result.error;
+            } catch (e) {
+                this.ok = false;
+                this.msg = `保存失败: ${e.message}`;
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async resetConfig() {
+            if (!confirm('重置将覆盖当前配置，确定继续？旧配置会备份为 .bak 文件。')) return;
+            try {
+                const resp = await fetch('/config/api/reset', {method: 'POST'});
+                const result = await resp.json();
+                showToast(resp.ok ? 'success' : 'error', result.message || result.error);
+                if (resp.ok) await this.loadConfig();
+            } catch (e) {
+                showToast('error', `重置失败: ${e.message}`);
+            }
+        },
+    };
+}
+
+function domainTester() {
+    return {
+        domains: '',
+        testing: false,
+        results: null,
+
+        async testDomains() {
+            this.testing = true;
+            this.results = null;
+            try {
+                const resp = await fetch('/config/api/test-domain', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({domains: this.domains}),
+                });
+                const data = await resp.json();
+                this.results = data.results;
+            } catch (e) {
+                showToast('error', `测试失败: ${e.message}`);
+            } finally {
+                this.testing = false;
+            }
+        },
+    };
+}
+
+function get_download_dir() { return ''; }  {# 服务端替换 #}
+</script>
+{% endblock %}

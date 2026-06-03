@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}JM Downloader — 首页{% endblock %}
+{% block page_class %}index{% endblock %}
+{% block content %}
+
+<!-- ============================================================
+     KV 主视觉区 (Hero Section)
+     ============================================================ -->
+<section class="hero-section">
+
+    <!-- 背景微粒 -->
+    <div class="hero-particles">
+        <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+        <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+        <div class="particle"></div><div class="particle"></div>
+    </div>
+
+    <!-- 光晕装饰 -->
+    <div class="hero-glow-orb orb-1"></div>
+    <div class="hero-glow-orb orb-2"></div>
+
+    <!-- Hero 内容 -->
+    <div class="hero-container">
+
+        <!-- 左侧：文字 + 输入区 -->
+        <div class="hero-text">
+
+            <div class="hero-badge animate-in delay-1">
+                <span class="hero-badge-dot"></span>
+                JM Comic Downloader
+            </div>
+
+            <h1 class="hero-title animate-in delay-2">
+                探索<span class="gradient-text">无限</span>可能
+            </h1>
+
+            <p class="hero-subtitle animate-in delay-3">
+                基于 jmcomic 引擎的高性能 Web 端下载管理器<br>
+                一键搜索、极速下载、智能管理，你的专属漫画库。
+            </p>
+
+            <!-- 快速输入区 -->
+            <div class="hero-action animate-in delay-4"
+                 x-data="{ albumId: '', loading: false, result: null, error: '' }">
+
+                <div class="hero-input-group">
+                    <span class="hero-input-prefix">JM</span>
+                    <input type="text" class="hero-input"
+                           placeholder="输入本子 ID，如 438696 …"
+                           x-model="albumId"
+                           @keyup.enter="$refs.searchBtn.click()">
+                </div>
+
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+                    <button class="btn-cta" x-ref="searchBtn"
+                            @click="
+                                if (!albumId.trim()) return;
+                                loading = true; error = '';
+                                fetch('/browse/api/album/' + albumId.trim())
+                                    .then(r => r.ok ? r.json() : r.json().then(j => Promise.reject(j)))
+                                    .then(data => { result = data; loading = false; })
+                                    .catch(e => { error = e.error || '查询失败'; loading = false; });
+                            ">
+                        <span class="btn-pulse-ring"></span>
+                        <i x-show="!loading">bi bi-lightning-charge-fill" :class="loading ? '' : 'bi bi-lightning-charge-fill'" x-transition></i>
+                        <i x-show="loading" class="spinner-border spinner-border-sm" style="width:18px;height:18px;border-width:2px;"></i>
+                        <span x-text="loading ? '查询中…' : '立即查询'"></span>
+                    </button>
+
+                    <a href="{{ url_for('search.index') }}" class="btn-ghost">
+                        <i class="bi bi-compass"></i> 浏览发现
+                    </a>
+                </div>
+
+                <!-- 查询结果 -->
+                <template x-if="result">
+                    <div class="qd-result-card" x-transition>
+                        <div class="qd-result-title" x-text="result.title"></div>
+                        <div class="qd-result-meta">
+                            作者: <span x-text="result.author || '未知'"></span> &nbsp;|&nbsp;
+                            章节数: <span x-text="result.total_photos"></span> &nbsp;|&nbsp;
+                            标签: <span x-text="result.tags || '无'"></span>
+                        </div>
+                        <div class="qd-actions">
+                            <button class="btn-qd-primary"
+                                    @click="
+                                        fetch('/download/api/start', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({album_id: albumId.trim()})
+                                        })
+                                        .then(r => r.json())
+                                        .then(data => {
+                                            window.TaskManager.startTracking(data.task_id, result.title);
+                                            window.location.href = '/download';
+                                        });
+                                    ">
+                                <i class="bi bi-download"></i> 直接下载
+                            </button>
+                            <a :href="'/browse/album/' + albumId.trim()" class="btn-qd-outline">
+                                <i class="bi bi-info-circle"></i> 查看详情
+                            </a>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 错误提示 -->
+                <div x-show="error" class="qd-error" x-text="error" x-transition></div>
+            </div>
+        </div>
+
+        <!-- 右侧：看板娘插画区 -->
+        <div class="hero-visual animate-in delay-5">
+            <div class="hero-ring ring-1"></div>
+            <div class="hero-ring ring-2"></div>
+            <div class="hero-illustration">
+                <img src="{{ url_for('static', filename='kanban.png') }}" 
+                     alt="看板娘" 
+                     style="width:100%;height:100%;object-fit:cover;">
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- ============================================================
+     快捷功能卡片区
+     ============================================================ -->
+<section class="features-section">
+
+    <div class="section-label animate-in delay-6">
+        <div class="section-tag">// 功能入口</div>
+        <h2 class="section-title">一站式漫画下载工作台</h2>
+    </div>
+
+    <div class="features-grid">
+
+        <!-- 搜索浏览 -->
+        <a href="{{ url_for('search.index') }}" class="feature-card animate-scale-in delay-6">
+            <div class="feature-card-icon">
+                <i class="bi bi-search"></i>
+            </div>
+            <div class="feature-card-title">搜索浏览</div>
+            <div class="feature-card-desc">关键词搜索 & 热门排行榜</div>
+            <div class="feature-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </a>
+
+        <!-- 下载管理 -->
+        <a href="{{ url_for('download.index') }}" class="feature-card animate-scale-in delay-7">
+            <div class="feature-card-icon">
+                <i class="bi bi-download"></i>
+            </div>
+            <div class="feature-card-title">下载管理</div>
+            <div class="feature-card-desc">任务队列 & 实时进度追踪</div>
+            <div class="feature-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </a>
+
+        <!-- 文件浏览 -->
+        <a href="{{ url_for('files.index') }}" class="feature-card animate-scale-in delay-7">
+            <div class="feature-card-icon">
+                <i class="bi bi-folder2-open"></i>
+            </div>
+            <div class="feature-card-title">文件浏览</div>
+            <div class="feature-card-desc">本地图库 & 批量导出</div>
+            <div class="feature-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </a>
+
+        <!-- 收藏夹 -->
+        <a href="{{ url_for('favorites.index') }}" class="feature-card animate-scale-in delay-8">
+            <div class="feature-card-icon">
+                <i class="bi bi-heart"></i>
+            </div>
+            <div class="feature-card-title">收藏夹</div>
+            <div class="feature-card-desc">账号登录 & 云端同步收藏</div>
+            <div class="feature-card-arrow"><i class="bi bi-arrow-right"></i></div>
+        </a>
+
+    </div>
+</section>
+
+{% endblock %}

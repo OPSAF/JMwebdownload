@@ -70,5 +70,8 @@ def main():
     app.run(host=host, port=port, debug=debug, threaded=True)
 
 
+# 创建顶层 app 实例供 Flask 开发服务器使用
+app = create_app()
+
 if __name__ == "__main__":
     main()

@@ -594,14 +594,13 @@ function browseApp(){
 </script>
 
 <script>
-/** Web 模式下载器 — 浏览器端获取图片链接 + JSZip 打包下载 */
+/** Web 模式下载器 — 使用服务端代理下载（自动解码 JM 防盗链） */
 function webDownloader(){
     return {
         albumId:'', title:'', loading:false, errorMsg:'',
         images:[], totalChapters:0, zipProgress:0,
 
         get chapterGroups(){
-            // 按章节分组
             var groups = {};
             this.images.forEach(function(img){
                 if(!groups[img.chapter]) groups[img.chapter] = { name: img.chapter, images: [] };
@@ -616,7 +615,6 @@ function webDownloader(){
             if(!this.albumId.trim()) return;
             this.loading = true; this.errorMsg = ''; this.images = []; this.title = '';
             try{
-                // 提取数字 ID
                 var raw = this.albumId.trim();
                 var m = raw.match(/\d{5,7}/);
                 var id = m ? m[0] : raw;
@@ -627,13 +625,18 @@ function webDownloader(){
                 if(d.error){ this.errorMsg = d.error; return; }
 
                 this.title = d.title || id;
+                // 保留原始 URL 用于显示预览，但下载时使用代理 API
                 this.images = d.images || [];
                 this.totalChapters = d.total_chapters || 0;
-                this.albumId = ''; // 清空输入
+                this.albumId = '';
                 showToast('success', '\u83b7\u53d6\u6210\u529f\uff1a' + this.images.length + ' \u5f20\u56fe\u7247');
             }catch(e){
                 this.errorMsg = '\u8bf7\u6c82\u5931\u8d25: ' + e.message;
             }finally{ this.loading = false; }
+        },
+
+        getProxyUrl(photoId, index){
+            return '/download/api/proxy-image/' + encodeURIComponent(photoId) + '/' + index;
         },
 
         async downloadAllAsZip(){
@@ -644,15 +647,18 @@ function webDownloader(){
                 var zip = new JSZip();
                 var folder = zip.folder(this.title || 'album');
 
-                // 并发下载图片（每次 5 张）
-                var BATCH = 5;
+                var BATCH = 3; // 降低并发数，避免服务器压力
                 for(var i = 0; i < this.images.length; i += BATCH){
                     var batch = this.images.slice(i, i + BATCH);
                     await Promise.all(batch.map(async function(img){
                         try{
-                            var resp = await fetch(img.url);
+                            // 使用代理 API 下载（服务端自动解码防盗链）
+                            var proxyUrl = '/download/api/proxy-image/' + 
+                                          encodeURIComponent(img.photo_id) + '/' + img.index;
+                            var resp = await fetch(proxyUrl);
+                            if(!resp.ok) throw new Error('HTTP ' + resp.status);
                             var blob = await resp.blob();
-                            var ext = img.url.split('.').pop().split('?')[0] || 'jpg';
+                            var ext = 'jpg'; // 代理返回的是解码后的图片，默认 jpg
                             var fname = (img.chapter.replace(/[\/:*?"<>|]/g,'_') || '') +
                                         '/' + String(img.index + 1).padStart(4,'0') + '.' + ext;
                             folder.file(fname, blob);
@@ -663,7 +669,6 @@ function webDownloader(){
                     this.zipProgress = Math.min(i + BATCH, this.images.length);
                 }
 
-                // 生成并触发下载
                 var content = await zip.generateAsync({ type: 'blob' });
                 var safeName = (this.title || 'download').replace(/[\/:*?"<>|]/g, '_') + '.zip';
                 var url = URL.createObjectURL(content);

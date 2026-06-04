@@ -101,6 +101,7 @@ def api_image_urls(album_id: str):
                         all_images.append({
                             "chapter": ptitle,
                             "chapter_index": pi,
+                            "photo_id": photo.photo_id,  # 新增：用于代理下载
                             "index": ii,
                             "url": url,
                         })
@@ -117,6 +118,51 @@ def api_image_urls(album_id: str):
         })
     except Exception as e:
         return jsonify({"error": f"获取图片链接失败: {str(e)[:300]}"}), 500
+
+
+@bp.route("/api/proxy-image/<photo_id>/<index>")
+def api_proxy_image(photo_id: str, index: int):
+    """代理下载单张图片（服务端解码防盗链后返回）.
+
+    JM 漫画的图片采用水平条带打乱的防盗链机制，
+    需要通过 jmcomic 下载才能正确解码。
+
+    Args:
+        photo_id: 章节 ID
+        index: 章节内图片索引（从 0 开始）
+    """
+    from ..services.jm_client import get_client
+
+    try:
+        client = get_client()
+        pdetail = client.get_photo_detail(photo_id, False)
+        images = list(pdetail)
+
+        if index < 0 or index >= len(images):
+            return jsonify({"error": "图片索引超出范围"}), 404
+
+        img = images[index]
+        url = getattr(img, "img_url", "")
+        if not url:
+            return jsonify({"error": "无法获取图片 URL"}), 404
+
+        # 使用 jmcomic 下载图片（自动解码防盗链）
+        response = client.download_image(img)
+        if response is None:
+            return jsonify({"error": "下载图片失败"}), 500
+
+        # 获取图片内容
+        content = response.content
+        content_type = response.headers.get('content-type', 'image/jpeg')
+
+        # 返回图片
+        return content, 200, {
+            "Content-Type": content_type,
+            "Cache-Control": "no-cache",
+        }
+    except Exception as e:
+        current_app.logger.error(f"代理图片下载失败 {photo_id}:{index}: {e}")
+        return jsonify({"error": f"代理下载失败: {str(e)[:200]}"}), 500
 
 
 @bp.route("/api/start/batch", methods=["POST"])

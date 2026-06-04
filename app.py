@@ -57,15 +57,13 @@ def main():
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("DEBUG", "true").lower() == "true"
 
-    print(f"""
-╔══════════════════════════════════════════════════════╗
-║          JM Downloader Web                         ║
-║  🚀 Starting at http://{host}:{port}                  ║
-║  📂 Download dir: downloads/                       ║
-║  ⚙️  Config file: config.yml                        ║
-║  🌐 Press Ctrl+C to stop                           ║
-╚══════════════════════════════════════════════════════╝
-    """)
+    print("=" * 50)
+    print("         JM Downloader Web")
+    print(f"  Starting at http://{host}:{port}")
+    print("  Download dir: downloads/")
+    print("  Config file: config.yml")
+    print("  Press Ctrl+C to stop")
+    print("=" * 50)
 
     app.run(host=host, port=port, debug=debug, threaded=True)
 

@@ -1,71 +1,124 @@
 {% extends "base.html" %}
-{% block title %}收藏夹 — JM Downloader{% endblock %}
+{% block title %}书签管理 — JM Downloader{% endblock %}
 {% block page_class %}favorites{% endblock %}
 {% block content %}
 
-<div x-data="favoritesApp()">
+<div x-data="bookmarksApp()">
     <div class="row">
+        <!-- 左侧：书签列表 -->
         <div class="col-lg-8">
             <div class="card bg-dark-subtle border-secondary mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-heart text-danger"></i> 我的收藏</h5>
-                    <div>
-                        <button class="btn btn-sm btn-outline-success" @click="exportCSV()" :disabled="exporting">
-                            <i class="bi bi-download"></i> 导出 CSV
+                    <h5 class="mb-0"><i class="bi bi-bookmark text-primary"></i> 我的书签</h5>
+                    <div class="btn-group btn-group-sm gap-1">
+                        <button class="btn btn-outline-success" @click="exportJSON()" :disabled="exporting">
+                            <i class="bi bi-download"></i> 导出 JSON
+                        </button>
+                        <button class="btn btn-outline-info" @click="exportCSV()" :disabled="exporting">
+                            <i class="bi bi-file-text"></i> 导出 CSV
                         </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- 未登录提示 -->
-                    <div x-show="!loggedIn" class="text-center py-4">
-                        <i class="bi bi-lock text-secondary" style="font-size: 3rem"></i>
-                        <p class="mt-2 text-secondary">请先登录以查看收藏夹</p>
+                    <!-- 标签筛选 -->
+                    <div class="mb-3 flex-wrap gap-2" x-show="tags.length > 0">
+                        <span class="text-secondary text-sm">筛选标签:</span>
+                        <button 
+                            class="tag-badge"
+                            :class="{ active: !selectedTag }"
+                            @click="selectedTag = ''">
+                            全部
+                        </button>
+                        <button 
+                            v-for="tag in tags" 
+                            :key="tag"
+                            class="tag-badge"
+                            :class="{ active: selectedTag === tag }"
+                            @click="selectedTag = tag">
+                            {{ tag }}
+                        </button>
                     </div>
 
-                    <!-- 收藏列表 -->
-                    <div x-show="loggedIn && items.length > 0">
+                    <!-- 添加新书签表单 -->
+                    <div class="card bg-dark border-secondary mb-3 p-3">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                                       placeholder="本子ID" x-model="newAlbumId" @keyup.enter="addBookmark()">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                                       placeholder="标题（可选）" x-model="newTitle">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                                       placeholder="标签（逗号分隔）" x-model="newTags">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary w-100" @click="addBookmark()" :disabled="adding">
+                                    <span x-show="!adding"><i class="bi bi-plus"></i></span>
+                                    <span x-show="adding" class="spinner-border spinner-border-sm"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 批量操作 -->
+                    <div x-show="selectedIds.length > 0" class="alert alert-info mb-3 d-flex justify-content-between align-items-center">
+                        <span>已选择 <span x-text="selectedIds.length"></span> 个书签</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-success" @click="batchDownload()">
+                                <i class="bi bi-download"></i> 批量下载
+                            </button>
+                            <button class="btn btn-danger" @click="batchRemove()">
+                                <i class="bi bi-trash"></i> 批量删除
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 书签列表 -->
+                    <div x-show="items.length > 0">
                         <div class="list-group list-group-flush rounded bg-dark">
                             <template x-for="item in items">
                                 <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <span class="badge bg-secondary me-2" x-text="item.id"></span>
-                                        <span x-text="item.title"></span>
+                                    <div class="flex-1">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" 
+                                                   :checked="selectedIds.includes(item.album_id)"
+                                                   @change="toggleSelect(item.album_id)">
+                                        </label>
+                                        <span class="badge bg-secondary me-2" x-text="item.album_id"></span>
+                                        <span x-text="item.title || '未命名'"></span>
+                                        <span v-if="item.tags && item.tags.length > 0" class="ms-2">
+                                            <span v-for="tag in item.tags" :key="tag" class="tag-badge-small">{{ tag }}</span>
+                                        </span>
                                     </div>
                                     <div class="btn-group btn-group-sm">
-                                        <a :href="'/browse/album/' + item.id" class="btn btn-outline-info">
+                                        <a :href="'/browse/album/' + item.album_id" class="btn btn-outline-info">
                                             <i class="bi bi-info-circle"></i>
                                         </a>
                                         <button class="btn btn-outline-success"
-                                                @click="downloadAlbum(item.id, item.title)">
+                                                @click="downloadAlbum(item.album_id, item.title)">
                                             <i class="bi bi-download"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning"
+                                                @click="editBookmark(item)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger"
+                                                @click="removeBookmark(item.album_id)">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                 </div>
                             </template>
                         </div>
-
-                        <!-- 分页 -->
-                        <nav class="mt-3" x-show="totalPages > 1">
-                            <ul class="pagination pagination-sm justify-content-center">
-                                <li class="page-item" :class="{disabled: page <= 1}">
-                                    <button class="page-link bg-dark text-light border-secondary"
-                                            @click="loadPage(page - 1)">上一页</button>
-                                </li>
-                                <li class="page-item disabled">
-                                    <span class="page-link bg-dark text-light border-secondary"
-                                          x-text="`${page} / ${totalPages}`"></span>
-                                </li>
-                                <li class="page-item" :class="{disabled: page >= totalPages}">
-                                    <button class="page-link bg-dark text-light border-secondary"
-                                            @click="loadPage(page + 1)">下一页</button>
-                                </li>
-                            </ul>
-                        </nav>
                     </div>
 
-                    <!-- 空收藏夹 -->
-                    <div x-show="loggedIn && items.length === 0 && !loading" class="text-center py-4 text-secondary">
-                        <p>收藏夹为空</p>
+                    <!-- 空书签 -->
+                    <div x-show="items.length === 0 && !loading" class="text-center py-4 text-secondary">
+                        <i class="bi bi-bookmark-x" style="font-size: 3rem"></i>
+                        <p class="mt-2">暂无书签，添加一些吧~</p>
                     </div>
 
                     <!-- 加载中 -->
@@ -76,33 +129,78 @@
             </div>
         </div>
 
-        <!-- 侧栏：登录 -->
+        <!-- 右侧：导入面板 -->
         <div class="col-lg-4">
             <div class="card bg-dark-subtle border-secondary">
                 <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-person"></i> 登录禁漫</h6>
+                    <h6 class="mb-0"><i class="bi bi-upload"></i> 导入书签</h6>
                 </div>
                 <div class="card-body">
-                    <div x-show="loggedIn" class="text-success mb-2">
-                        <i class="bi bi-check-circle-fill"></i> 已登录
+                    <div class="mb-2">
+                        <textarea class="form-control bg-dark text-light border-secondary"
+                                  rows="6" placeholder="粘贴 JSON 格式的书签数据..."
+                                  x-model="importData"></textarea>
                     </div>
-                    <form @submit.prevent="login()">
-                        <div class="mb-2">
-                            <input type="text" class="form-control bg-dark text-light border-secondary"
-                                   placeholder="用户名" x-model="username" required>
-                        </div>
-                        <div class="mb-2">
-                            <input type="password" class="form-control bg-dark text-light border-secondary"
-                                   placeholder="密码" x-model="password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" :disabled="loginLoading">
-                            <span x-show="!loginLoading">登录</span>
-                            <span x-show="loginLoading" class="spinner-border spinner-border-sm"></span>
-                        </button>
-                    </form>
-                    <div x-show="loginMsg" class="mt-2 alert py-1" :class="loginOk ? 'alert-success' : 'alert-danger'"
-                         x-text="loginMsg"></div>
+                    <button class="btn btn-primary w-100" @click="importBookmarks()" :disabled="importing">
+                        <span x-show="!importing"><i class="bi bi-upload"></i> 导入</span>
+                        <span x-show="importing" class="spinner-border spinner-border-sm"></span>
+                    </button>
+                    <div x-show="importMsg" class="mt-2 alert py-1" :class="importOk ? 'alert-success' : 'alert-danger'"
+                         x-text="importMsg"></div>
+                    <small class="text-muted mt-2 d-block">
+                        支持从其他设备导出的 JSON 文件导入，自动去重
+                    </small>
                 </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="card bg-dark-subtle border-secondary mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart"></i> 统计</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-value" x-text="items.length"></div>
+                            <div class="stat-label">书签总数</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-value" x-text="tags.length"></div>
+                            <div class="stat-label">标签数量</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div x-show="editingItem" class="modal-overlay" @click.self="closeEdit">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>编辑书签</h5>
+                <button @click="closeEdit" class="btn-close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label text-secondary">本子ID</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           x-model="editingItem.album_id" disabled>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label text-secondary">标题</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           x-model="editingItem.title">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label text-secondary">标签（逗号分隔）</label>
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           x-model="editingTagsStr">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @click="closeEdit">取消</button>
+                <button class="btn btn-primary" @click="saveEdit()">保存</button>
             </div>
         </div>
     </div>
@@ -111,67 +209,150 @@
 
 {% block scripts %}
 <script>
-function favoritesApp() {
+function bookmarksApp() {
     return {
-        loggedIn: false,
-        username: '',
-        password: '',
-        loginLoading: false,
-        loginMsg: '',
-        loginOk: false,
         items: [],
-        page: 1,
-        totalPages: 1,
+        tags: [],
+        selectedTag: '',
+        selectedIds: [],
         loading: false,
+        adding: false,
         exporting: false,
+        importing: false,
+        importData: '',
+        importMsg: '',
+        importOk: false,
+        newAlbumId: '',
+        newTitle: '',
+        newTags: '',
+        editingItem: null,
+        editingTagsStr: '',
 
-        async login() {
-            this.loginLoading = true;
-            this.loginMsg = '';
+        async init() {
+            await this.loadData();
+        },
+
+        async loadData() {
+            this.loading = true;
             try {
-                const resp = await fetch('/favorites/api/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username: this.username, password: this.password}),
-                });
-                const result = await resp.json();
-                this.loginOk = resp.ok;
-                this.loginMsg = result.message || result.error;
-                if (resp.ok) {
-                    this.loggedIn = true;
-                    this.loadPage(1);
-                }
+                const params = this.selectedTag ? `?tag=${encodeURIComponent(this.selectedTag)}` : '';
+                const resp = await fetch('/favorites/api/list' + params);
+                const data = await resp.json();
+                this.items = data.items || [];
+                await this.loadTags();
             } catch (e) {
-                this.loginOk = false;
-                this.loginMsg = `请求失败: ${e.message}`;
+                console.error(e);
             } finally {
-                this.loginLoading = false;
+                this.loading = false;
             }
         },
 
-        async loadPage(p) {
-            this.loading = true;
-            this.page = p;
+        async loadTags() {
             try {
-                const resp = await fetch(`/favorites/api/list?page=${p}`);
-                if (!resp.ok) {
-                    const err = await resp.json();
-                    if (err.error && err.error.includes('登录')) {
-                        this.loggedIn = false;
-                        this.loginMsg = '请先登录';
-                        this.loginOk = false;
-                    }
-                    throw new Error(err.error || '请求失败');
-                }
+                const resp = await fetch('/favorites/api/tags');
                 const data = await resp.json();
-                this.items = data.items || [];
-                this.totalPages = data.total_pages || 1;
-                this.loggedIn = true;
+                this.tags = data.tags || [];
             } catch (e) {
                 console.error(e);
-                this.items = [];
+            }
+        },
+
+        toggleSelect(id) {
+            const idx = this.selectedIds.indexOf(id);
+            if (idx > -1) {
+                this.selectedIds.splice(idx, 1);
+            } else {
+                this.selectedIds.push(id);
+            }
+        },
+
+        async addBookmark() {
+            if (!this.newAlbumId.trim()) return;
+            
+            this.adding = true;
+            try {
+                const tags = this.newTags ? this.newTags.split(',').map(t => t.trim()).filter(t => t) : [];
+                const resp = await fetch('/favorites/api/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        album_id: this.newAlbumId.trim(),
+                        title: this.newTitle.trim(),
+                        tags: tags,
+                    }),
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast('success', result.message);
+                    this.newAlbumId = '';
+                    this.newTitle = '';
+                    this.newTags = '';
+                    await this.loadData();
+                } else {
+                    showToast('error', result.error);
+                }
+            } catch (e) {
+                showToast('error', `添加失败: ${e.message}`);
             } finally {
-                this.loading = false;
+                this.adding = false;
+            }
+        },
+
+        async removeBookmark(albumId) {
+            if (!confirm('确定要删除这个书签吗？')) return;
+            
+            try {
+                const resp = await fetch('/favorites/api/remove', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({album_id: albumId}),
+                });
+                if (resp.ok) {
+                    showToast('success', '删除成功');
+                    await this.loadData();
+                } else {
+                    const result = await resp.json();
+                    showToast('error', result.error);
+                }
+            } catch (e) {
+                showToast('error', `删除失败: ${e.message}`);
+            }
+        },
+
+        editBookmark(item) {
+            this.editingItem = {...item};
+            this.editingTagsStr = item.tags ? item.tags.join(', ') : '';
+        },
+
+        closeEdit() {
+            this.editingItem = null;
+            this.editingTagsStr = '';
+        },
+
+        async saveEdit() {
+            if (!this.editingItem) return;
+            
+            const tags = this.editingTagsStr ? this.editingTagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+            try {
+                const resp = await fetch('/favorites/api/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        album_id: this.editingItem.album_id,
+                        title: this.editingItem.title,
+                        tags: tags,
+                    }),
+                });
+                if (resp.ok) {
+                    showToast('success', '更新成功');
+                    this.closeEdit();
+                    await this.loadData();
+                } else {
+                    const result = await resp.json();
+                    showToast('error', result.error);
+                }
+            } catch (e) {
+                showToast('error', `更新失败: ${e.message}`);
             }
         },
 
@@ -185,19 +366,91 @@ function favoritesApp() {
                 const result = await resp.json();
                 if (result.task_id) {
                     showToast('success', `已添加下载: ${title || id}`);
-                    window.TaskManager.startTracking(result.task_id, title || id);
+                    window.TaskManager?.startTracking(result.task_id, title || id);
                 }
             } catch (e) {
                 showToast('error', `下载失败: ${e.message}`);
             }
         },
 
+        async batchDownload() {
+            if (this.selectedIds.length === 0) return;
+            
+            try {
+                const resp = await fetch('/favorites/api/batch/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({album_ids: this.selectedIds}),
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    showToast('success', `已添加 ${result.count} 个下载任务`);
+                    this.selectedIds = [];
+                    window.location.href = '/download';
+                } else {
+                    showToast('error', result.error);
+                }
+            } catch (e) {
+                showToast('error', `批量下载失败: ${e.message}`);
+            }
+        },
+
+        async batchRemove() {
+            if (this.selectedIds.length === 0) return;
+            if (!confirm(`确定要删除选中的 ${this.selectedIds.length} 个书签吗？`)) return;
+            
+            for (const id of this.selectedIds) {
+                await fetch('/favorites/api/remove', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({album_id: id}),
+                });
+            }
+            showToast('success', '批量删除完成');
+            this.selectedIds = [];
+            await this.loadData();
+        },
+
+        async exportJSON() {
+            this.exporting = true;
+            try {
+                window.open('/favorites/api/export/json', '_blank');
+            } finally {
+                this.exporting = false;
+            }
+        },
+
         async exportCSV() {
             this.exporting = true;
             try {
-                window.open('/favorites/api/export', '_blank');
+                window.open('/favorites/api/export/csv', '_blank');
             } finally {
                 this.exporting = false;
+            }
+        },
+
+        async importBookmarks() {
+            if (!this.importData.trim()) return;
+            
+            this.importing = true;
+            try {
+                const resp = await fetch('/favorites/api/import', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({data: this.importData.trim()}),
+                });
+                const result = await resp.json();
+                this.importOk = resp.ok;
+                this.importMsg = resp.ok ? result.message : result.error;
+                if (resp.ok) {
+                    this.importData = '';
+                    await this.loadData();
+                }
+            } catch (e) {
+                this.importOk = false;
+                this.importMsg = `导入失败: ${e.message}`;
+            } finally {
+                this.importing = false;
             }
         },
     };

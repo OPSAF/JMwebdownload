@@ -52,25 +52,25 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link-jmd {{ 'active' if request.path.startswith('/browse') }}"
-                           href="{{ url_for('search.index') }}">
+                           href="/app#browse">
                             <i class="bi bi-search me-1"></i>搜索浏览
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/download') }}"
-                           href="{{ url_for('download.index') }}">
+                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/download') or request.path == '/app' }}"
+                           href="/app#download">
                             <i class="bi bi-download me-1"></i>下载管理
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/files') }}"
-                           href="{{ url_for('files.index') }}">
+                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/files') or request.path == '/app' }}"
+                           href="/app#files">
                             <i class="bi bi-folder2-open me-1"></i>文件浏览
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/favorites') }}"
-                           href="{{ url_for('favorites.index') }}">
+                        <a class="nav-link-jmd {{ 'active' if request.path.startswith('/favorites') or request.path == '/app' }}"
+                           href="/app#favorites">
                             <i class="bi bi-heart me-1"></i>收藏夹
                         </a>
                     </li>

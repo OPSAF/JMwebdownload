@@ -1,0 +1,615 @@
+{% extends "base.html" %}
+{% block title %}JM Downloader — 工作台{% endblock %}
+{% block page_class %}app{% endblock %}
+{% block content %}
+
+<!-- ============================================================
+     SPA 统一工作台 — macOS 窗口壳（单页应用架构）
+     所有子页面融合在此，通过 Alpine.js 切换显示，零刷新
+     ============================================================ -->
+<div class="mac-window"
+     x-data="spaRouter()"
+     x-init="init()">
+
+    <!-- ====== 共享窗口标题栏 ====== -->
+    <div class="mac-titlebar">
+        <div class="mac-traffic-lights">
+            <button class="mac-light-btn mac-light-close" title="关闭" onclick="window.location.href='/'"></button>
+            <button class="mac-light-btn mac-light-minimize" title="最小化"></button>
+            <button class="mac-light-btn mac-light-maximize" title="最大化"></button>
+        </div>
+        <!-- 动态标题：跟随当前页面切换 -->
+        <div class="mac-titlebar-text">
+            <i :class="pages[activePage].icon" class="mac-icon"></i>
+            <span x-text="pages[activePage].title"></span>
+        </div>
+    </div>
+
+    <!-- ====== 主体：侧边栏（固定）+ 内容区（切换） ====== -->
+    <div class="mac-body">
+
+        <!-- 毛玻璃侧边栏（所有页面共享） -->
+        <aside class="mac-sidebar">
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">导航</div>
+                <button class="mac-sidebar-item" :class="{ 'active': activePage === 'browse' }"
+                        @click.prevent="switchPage('browse')">
+                    <i class="bi bi-compass"></i>搜索浏览
+                </button>
+                <button class="mac-sidebar-item" :class="{ 'active': activePage === 'download' }"
+                        @click.prevent="switchPage('download')">
+                    <i class="bi bi-download"></i>下载管理
+                </button>
+                <button class="mac-sidebar-item" :class="{ 'active': activePage === 'files' }"
+                        @click.prevent="switchPage('files')">
+                    <i class="bi bi-folder2-open"></i>文件浏览
+                </button>
+                <button class="mac-sidebar-item" :class="{ 'active': activePage === 'favorites' }"
+                        @click.prevent="switchPage('favorites')">
+                    <i class="bi bi-heart"></i>书签管理
+                </button>
+            </div>
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">快捷</div>
+                <a href="/" class="mac-sidebar-item">
+                    <i class="bi bi-house-door"></i>返回首页
+                </a>
+                <a href="{{ url_for('config.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-gear"></i>系统配置
+                </a>
+            </div>
+        </aside>
+
+        <!-- ====== 右侧内容区 — 4个页面通过 x-show 切换 ====== -->
+        <main class="mac-main">
+
+            <!-- ============================================ -->
+            <!-- 页面 1: 搜索浏览 (Browse)                     -->
+            <!-- ============================================ -->
+            <section x-show="activePage === 'browse'"
+                     x-transition:enter="spaEnter" x-transition:leave="spaLeave"
+                     x-data="browseApp()" x-init="$watch('activePage', (v) => { if(v==='browse') init(); })"
+                     style="display:none; flex-direction: column; gap: 16px; flex: 1; min-height: 0;">
+
+                <!-- Tab 切换 -->
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div class="mac-tabs">
+                        <button class="mac-tab" :class="{ 'active': mode === 'hot' }"
+                                @click="switchMode('hot')"><i class="bi bi-fire"></i>热门</button>
+                        <button class="mac-tab" :class="{ 'active': mode === 'rankings' }"
+                                @click="switchMode('rankings')"><i class="bi bi-bar-chart"></i>排行榜</button>
+                        <button class="mac-tab" :class="{ 'active': mode === 'search' }"
+                                @click="switchMode('search')"><i class="bi bi-search"></i>搜索</button>
+                    </div>
+                    <div x-show="mode === 'hot'" style="display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:.78rem;color:var(--text-muted)"><i class="bi bi-fire" style="color:var(--accent)"></i> 本周热门</span>
+                        <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                                @click="page = 1; doHot()" :disabled="loading">
+                            <i class="bi bi-arrow-clockwise"></i><span x-show="!loading">刷新</span>
+                            <span x-show="loading" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 排行榜筛选 -->
+                <div x-show="mode === 'rankings'"
+                     style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px;">
+                    <div class="mac-form-group" style="margin-bottom:0">
+                        <label class="mac-form-label">时间范围</label>
+                        <select class="mac-select" style="width:130px" x-model="rankTime">
+                            <option value="ALL">全部时间</option><option value="TODAY">今日</option>
+                            <option value="WEEK" selected>本周</option><option value="MONTH">本月</option>
+                        </select>
+                    </div>
+                    <div class="mac-form-group" style="margin-bottom:0">
+                        <label class="mac-form-label">排序方式</label>
+                        <select class="mac-select" style="width:130px" x-model="rankOrder">
+                            <option value="VIEW" selected>按观看量</option><option value="LIKE">按点赞数</option>
+                            <option value="LATEST">按最新发布</option>
+                        </select>
+                    </div>
+                    <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                            @click="page = 1; doRankings()" :disabled="loading">
+                        <i class="bi bi-arrow-clockwise"></i><span x-show="!loading">刷新</span>
+                        <span x-show="loading" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                    </button>
+                </div>
+
+                <!-- 搜索栏 -->
+                <div x-show="mode === 'search'" class="mac-search-bar">
+                    <input type="text" class="mac-search-input"
+                           placeholder="输入关键字、标签、作者名..." x-model="searchQuery"
+                           @keyup.enter="page = 1; doSearch()">
+                    <i class="bi bi-search mac-search-icon"></i>
+                    <button class="mac-btn mac-btn-primary mac-btn-sm"
+                            style="position:absolute;right:6px;top:50%;transform:translateY(-50%)"
+                            @click="page = 1; doSearch()" :disabled="loading">
+                        <i class="bi bi-search"></i><span x-show="!loading">搜索</span>
+                        <span x-show="loading" class="spinner-border spinner-border-sm" style="width:13px;height:13px;border-width:2px;"></span>
+                    </button>
+                </div>
+
+                <!-- HTMX 结果区域 -->
+                <div id="search-results-area" hx-get="" hx-trigger="load" style="flex:1">
+                    <div class="mac-empty-state">
+                        <i class="bi bi-hourglass-split mac-empty-icon"></i>
+                        <p class="mac-empty-text">加载中...</p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================ -->
+            <!-- 页面 2: 下载管理 (Download)                   -->
+            <!-- ============================================ -->
+            <section x-show="activePage === 'download'"
+                     x-transition:enter="spaEnter" x-transition:leave="spaLeave"
+                     x-data="downloadManager()" x-init="$watch('activePage', (v) => { if(v==='download') init(); })"
+                     style="display:none; flex-direction: column; gap: 16px; flex: 1; min-height: 0;">
+
+                <!-- 新建任务面板 -->
+                <div class="mac-panel" x-data="{ showAdvanced: false }">
+                    <div class="mac-panel-header">
+                        <span class="mac-panel-title"><i class="bi bi-plus-circle-fill"></i>新建下载任务</span>
+                        <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="showAdvanced = !showAdvanced">
+                            <i class="bi bi-sliders"></i><span x-text="showAdvanced ? '收起' : '高级选项'"></span>
+                        </button>
+                    </div>
+                    <div class="mac-panel-body">
+                        <form @submit.prevent="submitDownload()">
+                            <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+                                <div class="mac-form-group" style="margin-bottom:0;min-width:200px;flex:1;">
+                                    <label class="mac-form-label">本子ID</label>
+                                    <input type="text" class="mac-input" placeholder="输入 ID 或粘贴含 ID 的文本" x-model="albumId" required @paste="handlePaste($event)">
+                                    <small style="display:block;margin-top:3px;font-size:.72rem;color:var(--text-muted)">支持自动提取文本中的数字 ID</small>
+                                </div>
+                                <div class="mac-form-group" style="margin-bottom:0">
+                                    <label class="mac-form-label">导出格式</label>
+                                    <div style="display:flex;gap:6px">
+                                        <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                            <input type="checkbox" value="pdf" x-model="exportFormats" style="accent-color:var(--accent)"> PDF
+                                        </label>
+                                        <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                            <input type="checkbox" value="zip" x-model="exportFormats" style="accent-color:var(--accent)"> ZIP
+                                        </label>
+                                        <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                            <input type="checkbox" value="long_img" x-model="exportFormats" style="accent-color:var(--accent)"> 长图
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mac-form-group" style="margin-bottom:0">
+                                    <label class="mac-form-label">图片格式</label>
+                                    <select class="mac-select" style="width:95px" x-model="imageSuffix">
+                                        <option value="">默认</option><option value=".jpg">JPG</option><option value=".png">PNG</option><option value=".webp">WebP</option>
+                                    </select>
+                                </div>
+                                <div class="mac-form-group" style="margin-bottom:0">
+                                    <label class="mac-form-label">并发数</label>
+                                    <input type="number" class="mac-input" style="width:75px" x-model="threadCount" placeholder="默认" min="1" max="50">
+                                </div>
+                                <button type="submit" class="mac-btn mac-btn-success" :disabled="submitting" style="min-width:120px;">
+                                    <span x-show="!submitting"><i class="bi bi-download"></i>开始下载</span>
+                                    <span x-show="submitting"><span class="spinner-border spinner-border-sm" style="width:15px;height:15px;border-width:2px;"></span> 提交中</span>
+                                </button>
+                            </div>
+                            <!-- 高级选项 -->
+                            <div x-show="showAdvanced" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-glass)">
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+                                    <div class="mac-form-group"><label class="mac-form-label">登录用户名</label><input type="text" class="mac-input mac-input-sm" placeholder="禁漫账号" x-model="loginUsername"></div>
+                                    <div class="mac-form-group"><label class="mac-form-label">登录密码</label><input type="password" class="mac-input mac-input-sm" placeholder="禁漫密码" x-model="loginPassword"></div>
+                                    <div class="mac-form-group"><label class="mac-form-label">代理地址</label><input type="text" class="mac-input mac-input-sm" placeholder="如 127.0.0.1:7890" x-model="proxy"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 任务列表 (HTMX 轮询) -->
+                <div id="task-list-container" hx-get="/download/partial/task-list" hx-trigger="every 2s" hx-swap="innerHTML" style="flex:1">
+                    {% include "partials/task_list.html" %}
+                </div>
+            </section>
+
+
+            <!-- ============================================ -->
+            <!-- 页面 3: 文件浏览 (Files / Finder)             -->
+            <!-- ============================================ -->
+            <section x-show="activePage === 'files'"
+                     x-transition:enter="spaEnter" x-transition:leave="spaLeave"
+                     style="display:none; flex-direction: column; gap: 12px; flex: 1; min-height: 0;">
+
+                <!-- 工具栏行 -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:6px;font-size:.84rem;color:var(--text-primary)">
+                        <i class="bi bi-folder2-open" style="color:#F59E0B;font-size:1.05rem"></i><strong>本地文件</strong>
+                    </div>
+                    <button class="mac-btn mac-btn-secondary mac-btn-sm" onclick="htmx.trigger('#file-tree','reload')">
+                        <i class="bi bi-arrow-clockwise"></i>刷新
+                    </button>
+                </div>
+
+                <!-- Finder 风格文件列表容器 -->
+                <div class="mac-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                    <div class="mac-panel-body" style="padding:10px 14px;overflow-y:auto;flex:1;" id="file-tree"
+                         hx-get="/files/browse" hx-trigger="load, reload from:body" hx-swap="innerHTML">
+                        <div class="mac-empty-state" style="padding:2rem 1rem">
+                            <i class="bi bi-hourglass-split mac-empty-icon"></i>
+                            <p class="mac-empty-text">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 导出 + 统计面板 -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" x-data="exportPanel()">
+                    <div class="mac-panel">
+                        <div class="mac-panel-header"><span class="mac-panel-title"><i class="bi bi-file-earmark-arrow-up" style="color:var(--warning)"></i>导出工具</span></div>
+                        <div class="mac-panel-body">
+                            <div class="mac-form-group"><label class="mac-form-label">目标路径（相对于下载目录）</label><input type="text" class="mac-input" placeholder="例如: JM12345" x-model="exportPath"></div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                                <button class="mac-btn mac-btn-danger mac-btn-sm" @click="doExport('pdf')" :disabled="exporting"><i class="bi bi-file-pdf"></i>PDF</button>
+                                <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="doExport('zip')" :disabled="exporting" style="color:#F59E0B;border-color:rgba(245,158,11,.3)"><i class="bi bi-file-zip"></i>ZIP</button>
+                                <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="doExport('long_img')" :disabled="exporting" style="color:var(--accent)"><i class="bi bi-image"></i>长图</button>
+                            </div>
+                            <div x-show="msg" class="alert py-1 px-2 mt-2" :class="ok ? 'alert-success' : 'alert-danger'" x-text="msg" style="border-radius:8px;font-size:.82rem"></div>
+                        </div>
+                    </div>
+                    <div class="mac-panel">
+                        <div class="mac-panel-header"><span class="mac-panel-title"><i class="bi bi-bar-chart"></i>存储统计</span></div>
+                        <div class="mac-panel-body" id="storage-stats" hx-get="/files/browse" hx-trigger="load once"></div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ============================================ -->
+            <!-- 页面 4: 书签管理 (Favorites)                  -->
+            <!-- ============================================ -->
+            <section x-show="activePage === 'favorites'"
+                     x-transition:enter="spaEnter" x-transition:leave="spaLeave"
+                     x-data="bookmarksApp()" x-init="$watch('activePage', (v) => { if(v==='favorites') init(); })"
+                     style="display:none; flex-direction: column; gap: 12px; flex: 1; min-height: 0;">
+
+                <!-- 标签筛选条 -->
+                <div x-show="tags.length > 0" class="mac-tag-filter">
+                    <span style="font-size:.76rem;color:var(--text-muted);font-weight:600;margin-right:4px;">标签:</span>
+                    <button class="mac-tag-pill" :class="{ active: !selectedTag }" @click="selectedTag = ''; loadData()">全部</button>
+                    <template x-for="tag in tags">
+                        <button class="mac-tag-pill" :class="{ active: selectedTag === tag }" @click="selectedTag = tag; loadData()" x-text="tag"></button>
+                    </template>
+                </div>
+
+                <!-- 添加新书签 -->
+                <div class="mac-panel">
+                    <div class="mac-panel-body" style="padding:12px 16px;">
+                        <form @submit.prevent="addBookmark()" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                            <div class="mac-form-group" style="margin-bottom:0;min-width:140px;"><input type="text" class="mac-input" placeholder="本子ID" x-model="newAlbumId" @keyup.enter="addBookmark()"></div>
+                            <div class="mac-form-group" style="margin-bottom:0;min-width:170px;"><input type="text" class="mac-input" placeholder="标题（可选）" x-model="newTitle"></div>
+                            <div class="mac-form-group" style="margin-bottom:0;min-width:150px;"><input type="text" class="mac-input" placeholder="标签,逗号分隔" x-model="newTags"></div>
+                            <button type="submit" class="mac-btn mac-btn-primary mac-btn-sm" :disabled="adding">
+                                <span x-show="!adding"><i class="bi bi-plus-lg"></i>添加</span>
+                                <span x-show="adding" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 批量操作栏 -->
+                <div x-show="selectedIds.length > 0" class="mac-panel" style="background:rgba(56,139,253,0.06);border-color:rgba(56,139,253,0.2)">
+                    <div class="mac-panel-body" style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:.84rem;color:var(--text-primary)">已选择 <strong x-text="selectedIds.length" style="color:var(--accent)"></strong> 个</span>
+                        <div style="display:flex;gap:6px;">
+                            <button class="mac-btn mac-btn-success mac-btn-sm" @click="batchDownload()"><i class="bi bi-download"></i>批量下载</button>
+                            <button class="mac-btn mac-btn-danger mac-btn-sm" @click="batchRemove()"><i class="bi bi-trash"></i>批量删除</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 书签列表 + 右侧统计 -->
+                <div style="display:flex;gap:16px;flex:1;min-height:0;">
+                    <!-- 书签列表 -->
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
+                            <span class="mac-panel-title" style="font-size:.88rem"><i class="bi bi-bookmarks"></i>我的书签</span>
+                            <div style="display:flex;gap:5px;">
+                                <button class="mac-btn mac-btn-success mac-btn-sm" @click="exportJSON()" :disabled="exporting"><i class="bi bi-download"></i>JSON</button>
+                                <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="exportCSV()" :disabled="exporting"><i class="bi bi-file-text"></i>CSV</button>
+                            </div>
+                        </div>
+                        <div x-show="items.length > 0" class="mac-bookmark-grid" style="flex:1;overflow-y:auto;padding-right:4px;">
+                            <template x-for="item in items">
+                                <div class="mac-bookmark-card">
+                                    <div class="mac-bookmark-check"><input type="checkbox" :checked="selectedIds.includes(item.album_id)" @change="toggleSelect(item.album_id)" style="accent-color:var(--accent)"></div>
+                                    <div class="mac-bookmark-body">
+                                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                                            <span class="mac-task-id-badge" style="font-size:.68rem;padding:1px 7px">JM<span x-text="item.album_id"></span></span>
+                                        </div>
+                                        <div class="mac-bookmark-title" x-text="item.title || ('#' + item.album_id)"></div>
+                                        <div x-show="item.tags && item.tags.length > 0" class="mac-bookmark-tags">
+                                            <template x-for="tag in item.tags.slice(0,3)"><span class="mac-tag-chip" x-text="tag"></span></template>
+                                        </div>
+                                    </div>
+                                    <div class="mac-bookmark-actions">
+                                        <a :href="'/browse/album/' + item.album_id" class="mac-action-btn" title="详情"><i class="bi bi-info-circle"></i></a>
+                                        <button class="mac-action-btn btn-success-hover" title="下载" @click="downloadAlbum(item.album_id, item.title)"><i class="bi bi-download"></i></button>
+                                        <button class="mac-action-btn" title="编辑" @click="editBookmark(item)"><i class="bi bi-pencil"></i></button>
+                                        <button class="mac-action-btn btn-danger-hover" title="删除" @click="removeBookmark(item.album_id)"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div x-show="items.length === 0 && !loading" class="mac-empty-state"><i class="bi bi-bookmark-x mac-empty-icon"></i><p class="mac-empty-text">暂无书签</p><p class="mac-empty-hint">添加一些吧~</p></div>
+                        <div x-show="loading" class="mac-empty-state"><i class="bi bi-hourglass-split mac-empty-icon"></i><p class="mac-empty-text">加载中...</p></div>
+                    </div>
+
+                    <!-- 右侧：导入 + 统计 -->
+                    <div style="width:260px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;">
+                        <div class="mac-panel">
+                            <div class="mac-panel-header"><span class="mac-panel-title"><i class="bi bi-upload"></i>导入书签</span></div>
+                            <div class="mac-panel-body">
+                                <textarea class="form-control form-control-sm" rows="4" placeholder="粘贴 JSON 格式的书签数据..." x-model="importData" style="font-size:.82rem;border-radius:8px;border-color:var(--input-border);background:var(--input-bg);color:var(--text-primary);resize:none"></textarea>
+                                <button class="mac-btn mac-btn-primary mac-btn-sm w-100 mt-2" @click="importBookmarks()" :disabled="importing">
+                                    <span x-show="!importing"><i class="bi bi-upload"></i>导入</span>
+                                    <span x-show="importing" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                                </button>
+                                <div x-show="importMsg" class="alert py-1 px-2 mt-2" :class="importOk ? 'alert-success' : 'alert-danger'" x-text="importMsg" style="border-radius:8px;font-size:.8rem"></div>
+                                <small style="display:block;margin-top:4px;font-size:.71rem;color:var(--text-muted)">支持从其他设备导出的 JSON 文件，自动去重</small>
+                            </div>
+                        </div>
+                        <div class="mac-panel">
+                            <div class="mac-panel-header"><span class="mac-panel-title"><i class="bi bi-pie-chart" style="color:var(--purple)"></i>统计</span></div>
+                            <div class="mac-panel-body">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div class="mac-stat-card"><div class="mac-stat-value" x-text="items.length"></div><div class="mac-stat-label">书签总数</div></div>
+                                    <div class="mac-stat-card"><div class="mac-stat-value" x-text="tags.length"></div><div class="mac-stat-label">标签数量</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main><!-- /mac-main -->
+    </div><!-- /mac-body -->
+</div><!-- /mac-window -->
+
+<!-- 编辑弹窗 (全局，不受页面切换影响) -->
+<div x-data="bookmarksApp()" x-show="editingItem !== null" class="mac-modal-overlay" @click.self="closeEdit()">
+    <div class="mac-modal-dialog">
+        <div class="mac-modal-header"><span>编辑书签</span><button @click="closeEdit()" class="btn-close" style="opacity:.5"></button></div>
+        <div class="mac-modal-body">
+            <div class="mac-form-group"><label class="mac-form-label">本子ID（只读）</label><input type="text" class="mac-input" x-model="editingItem.album_id" disabled style="opacity:.55"></div>
+            <div class="mac-form-group"><label class="mac-form-label">标题</label><input type="text" class="mac-input" x-model="editingItem.title"></div>
+            <div class="mac-form-group" style="margin-bottom:0"><label class="mac-form-label">标签（逗号分隔）</label><input type="text" class="mac-input" x-model="editingTagsStr"></div>
+        </div>
+        <div class="mac-modal-footer">
+            <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="closeEdit()">取消</button>
+            <button class="mac-btn mac-btn-primary mac-btn-sm" @click="saveEdit()">保存</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- ============================================================
+     SPA 路由控制器 — Alpine.js 单页应用核心逻辑
+     ============================================================ -->
+<script>
+/**
+ * spaRouter — SPA 全局路由状态机
+ * 管理 4 个页面的切换、URL hash 同步、过渡动画
+ */
+function spaRouter() {
+    return {
+        // 当前激活的页面标识
+        activePage: 'browse',
+
+        // 页面元信息映射（用于动态更新标题栏）
+        pages: {
+            browse:   { title: '搜索浏览', icon: 'bi bi-compass' },
+            download: { title: '下载管理', icon: 'bi bi-download' },
+            files:    { title: '文件浏览器', icon: 'bi bi-folder2-open' },
+            favorites:{ title: '书签管理', icon: 'bi bi-bookmark' }
+        },
+
+        // 过渡动画类名（与 CSS @keyframes 配合）
+        spaEnter: function(el, done) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(12px) scale(0.97)';
+            requestAnimationFrame(function() {
+                el.style.transition = 'opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0) scale(1)';
+                setTimeout(done, 260);
+            });
+        },
+
+        spaLeave: function(el, done) {
+            el.style.transition = 'opacity 0.18s cubic-bezier(0.4, 0, 1, 1), transform 0.18s cubic-bezier(0.4, 0, 1, 1)';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-6px) scale(0.99)';
+            setTimeout(done, 190);
+        },
+
+        /**
+         * 初始化：从 URL hash 或 query 参数恢复页面状态
+         */
+        init() {
+            // 优先从 URL hash 读取（如 /app#download）
+            var hash = window.location.hash.replace('#', '');
+            if (this.pages[hash]) {
+                this.activePage = hash;
+            } else {
+                // 从 query 参数读取（如 /app?page=files）
+                var params = new URLSearchParams(window.location.search);
+                var pageParam = params.get('page');
+                if (this.pages[pageParam]) {
+                    this.activePage = pageParam;
+                }
+            }
+
+            // 监听浏览器前进/后退按钮
+            window.addEventListener('hashchange', () => {
+                var h = window.location.hash.replace('#', '');
+                if (this.pages[h] && this.activePage !== h) {
+                    this.switchPage(h);
+                }
+            });
+        },
+
+        /**
+         * 切换页面 — 核心方法
+         * @param {string} target - 目标页面 key ('browse'|'download'|'files'|'favorites')
+         */
+        switchPage(target) {
+            if (!target || target === this.activePage || !this.pages[target]) return;
+
+            var prev = this.activePage;
+            this.activePage = target;
+
+            // 更新 URL hash（不触发页面刷新）
+            history.replaceState(null, '', '#' + target);
+
+            // 更新浏览器标题
+            document.title = this.pages[target].title + ' \u2014 JM Downloader';
+
+            // 更新 body 的页面类名（用于背景图等）
+            document.body.className = 'page-app';
+
+            // 触发自定义事件，供外部监听
+            window.dispatchEvent(new CustomEvent('spa:pageChange', {
+                detail: { from: prev, to: target }
+            }));
+        }
+    };
+}
+</script>
+
+<!-- ========== 各页面的 Alpine.js 数据函数（保持原有逻辑不变）========== -->
+
+<script>
+/** 搜索浏览页 */
+function browseApp(){
+    return {
+        mode:'hot', searchQuery:'', page:1, rankTime:'WEEK', rankOrder:'VIEW', loading:false,
+        init(){ this.doHot(); },
+        switchMode(m){ if(this.mode===m)return; this.mode=m; this.page=1; if(m==='hot')this.doHot(); else if(m==='rankings')this.doRankings(); },
+        doHot(){ this.loading=true; var a=document.getElementById('search-results-area'); a.setAttribute('hx-get','/browse/rankings?time=WEEK&category=CATEGORY_ALL&order_by=VIEW&page='+this.page); htmx.process(a); htmx.trigger(a,'htmx-get'); this.loading=false; },
+        doRankings(){ this.loading=true; var a=document.getElementById('search-results-area'); a.setAttribute('hx-get','/browse/rankings?time='+this.rankTime+'&category=CATEGORY_ALL&order_by='+this.rankOrder+'&page='+this.page); htmx.process(a); htmx.trigger(a,'htmx-get'); this.loading=false; },
+        doSearch(){ this.loading=true; var a=document.getElementById('search-results-area'); var q=encodeURIComponent(this.searchQuery||''); a.setAttribute('hx-get','/browse/search-results?q='+q+'&page='+this.page); htmx.process(a); htmx.trigger(a,'htmx-get'); this.loading=false; }
+    };
+}
+</script>
+
+<script>
+/** 下载管理页 */
+function downloadManager(){
+    return {
+        albumId:'', exportFormats:[], imageSuffix:'', threadCount:null,
+        loginUsername:'', loginPassword:'', proxy:'', submitting:false,
+        init(){ if(!window.TaskManager) window.TaskManager=new TaskTracker(); },
+        handlePaste(e){ setTimeout(function(){var t=this.albumId,m=t.match(/(\d{5,7})/);if(m&&m[1]!==t)this.albumId=m[1];}.bind(this),50); },
+        async submitDownload(){
+            if(!this.albumId.trim())return;
+            var m=this.albumId.trim().match(/\d{5,7}/),id=m?m[0]:this.albumId.trim();
+            this.submitting=true;
+            try{
+                var r=await fetch('/download/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id,image_suffix:this.imageSuffix||null,thread_count:this.threadCount||null,export_formats:this.exportFormats.length>0?this.exportFormats:null,login_username:this.loginUsername||null,login_password:this.loginPassword||null,proxy:this.proxy||null})});
+                var d=await r.json();
+                if(d.task_id){showToast('success','\u4efb\u52a1\u5df2\u521b\u5efa: '+d.task_id);window.TaskManager.startTracking(d.task_id,id);this.albumId='';this.exportFormats=[];}
+                else showToast('error',d.error||'\u521b\u5efa\u5931\u8d25');
+            }catch(e){showToast('error','\u8bf7\u6c42\u5931\u8d25: '+e.message);}
+            finally{this.submitting=false;}
+        }
+    };
+}
+</script>
+
+<script>
+/** 文件浏览 — 导出面版 */
+function exportPanel(){
+    return {
+        exportPath:'', exporting:false, msg:'', ok:false,
+        async doExport(fmt){
+            if(!this.exportPath.trim()){this.msg='请输入路径';this.ok=false;return;}
+            this.exporting=true; this.msg='';
+            try{
+                var r=await fetch('/files/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:this.exportPath.trim(),format:fmt})});
+                var d=await r.json(); this.ok=r.ok; this.msg=d.message||d.error;
+                if(r.ok) htmx.trigger('#file-tree','reload');
+            }catch(e){this.ok=false;this.msg='请求失败: '+e.message;}
+            finally{this.exporting=false;}
+        }
+    };
+}
+</script>
+
+<script>
+/** 书签管理页 */
+function bookmarksApp(){
+    return {
+        items:[], tags:[], selectedTag:'', selectedIds:[],
+        loading:false, adding:false, exporting:false,
+        importing:false, importData:'', importMsg:'', importOk:false,
+        newAlbumId:'', newTitle:'', newTags:'',
+        editingItem:null, editingTagsStr:'',
+
+        async init(){ await this.loadData(); },
+
+        async loadData(){
+            this.loading=true;
+            try{ var p=this.selectedTag?'?tag='+encodeURIComponent(this.selectedTag):''; var r=await fetch('/favorites/api/list'+p); var d=await r.json(); this.items=d.items||[]; var tr=await fetch('/favorites/api/tags'); this.tags=(await tr.json()).tags||[]; }
+            catch(e){console.error(e);} finally{this.loading=false;}
+        },
+
+        toggleSelect(id){ var i=this.selectedIds.indexOf(id); if(i>-1)this.selectedIds.splice(i,1); else this.selectedIds.push(id); },
+
+        async addBookmark(){
+            if(!this.newAlbumId.trim())return; this.adding=true;
+            try{ var tgs=this.newTags?this.newTags.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}):[]; var r=await fetch('/favorites/api/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.newAlbumId.trim(),title:this.newTitle.trim(),tags:tgs})}); var d=await r.json(); if(r.ok){showToast('success',d.message);this.newAlbumId='';this.newTitle='';this.newTags='';await this.loadData();}else showToast('error',d.error); }
+            catch(e){showToast('error',e.message);} finally{this.adding=false;}
+        },
+
+        async removeBookmark(id){ if(!confirm('\u786e\u5b9a\u5220\u9664\uff1f'))return; var r=await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id})}); if(r.ok){showToast('success','\u5220\u9664\u6210\u529f'); await this.loadData();}else{var d=await r.json();showToast('error',d.error);} },
+
+        editBookmark(item){this.editingItem={...item};this.editingTagsStr=item.tags?item.tags.join(', '):'';},
+        closeEdit(){this.editingItem=null;this.editingTagsStr='';},
+
+        async saveEdit(){
+            if(!this.editingItem)return;
+            var tgs=this.editingTagsStr?this.editingTagsStr.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}):[];
+            var r=await fetch('/favorites/api/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.editingItem.album_id,title:this.editingItem.title,tags:tgs})});
+            if(r.ok){showToast('success','\u66f4\u65b0\u6210\u529f');this.closeEdit();await this.loadData();}
+            else{var d=await r.json();showToast('error',d.error);}
+        },
+
+        async downloadAlbum(id,title){
+            try{var r=await fetch('/download/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id})});var d=await r.json();if(d.task_id){showToast('success','\u5df2\u6dfb\u52a0:'+(title||id));window.TaskManager&&window.TaskManager.startTracking(d.task_id,title||id);}}
+            catch(e){showToast('error',e.message);}
+        },
+
+        async batchDownload(){
+            if(!this.selectedIds.length)return;
+            var r=await fetch('/favorites/api/batch/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_ids:this.selectedIds})}); var d=await r.json();
+            if(r.ok){showToast('success','\u5df2\u6dfb\u52a0 '+d.count+' \u4e2a\u4efb\u52a1');this.selectedIds=[];}
+            else showToast('error',d.error);
+        },
+
+        async batchRemove(){
+            if(!this.selectedIds.length||!confirm('\u786e\u5b9a\u5220\u9664 '+this.selectedIds.length+' \u4e2a\u4e66\u7b7e\uff1f'))return;
+            for(var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i])});
+            showToast('success','\u6279\u91cf\u5220\u9664\u5b8c\u6210');this.selectedIds=[];await this.loadData();
+        },
+
+        async exportJSON(){this.exporting=true;try{window.open('/favorites/api/export/json','_blank')}finally{this.exporting=false}},
+        async exportCSV(){this.exporting=true;try{window.open('/favorites/api/export/csv','_blank')}finally{this.exporting=false}},
+
+        async importBookmarks(){
+            if(!this.importData.trim())return; this.importing=true;
+            try{var r=await fetch('/favorites/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:this.importData.trim()})});var d=await r.json();this.importOk=r.ok;this.msg=r.ok?d.message:d.error;if(r.ok){this.importData='';await this.loadData();}}
+            catch(e){this.importOk=false;this.msg=e.message;} finally{this.importing=false;}
+        },
+    };
+}
+</script>
+{% endblock %}

@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, request
 
 # 确保项目根目录在 sys.path 中
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -37,6 +37,28 @@ def create_app() -> Flask:
     @app.route("/")
     def index():
         return render_template("index.html")
+
+    # SPA 统一工作台（4 个子页面融合为单页应用）
+    @app.route("/app")
+    def spa_app():
+        return render_template("subpages.html")
+
+    # 旧子页面路由 → 重定向到 SPA（保持 hash 兼容）
+    @app.route("/browse")
+    def redirect_browse():
+        return redirect("/app#browse", code=302)
+
+    @app.route("/download")
+    def redirect_download():
+        return redirect("/app#download", code=302)
+
+    @app.route("/files")
+    def redirect_files():
+        return redirect("/app#files", code=302)
+
+    @app.route("/favorites")
+    def redirect_favorites():
+        return redirect("/app#favorites", code=302)
 
     # 注入模板全局变量
     @app.context_processor

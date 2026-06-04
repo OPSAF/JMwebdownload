@@ -125,50 +125,6 @@
 
 
 <!-- ============================================================
-     热门排行榜区
-     ============================================================ -->
-<section class="hot-section">
-    <div class="section-label">
-        <div class="section-tag">// Hot</div>
-        <h2 class="section-title">🔥 本周热门</h2>
-    </div>
-    
-    <div x-data="hotApp()" x-init="loadHot()">
-        <div class="hot-list" x-show="items.length > 0">
-            <template x-for="(item, index) in items">
-                <div class="hot-item">
-                    <span class="hot-rank" :class="{ 'top-three': index < 3 }" x-text="index + 1"></span>
-                    <div class="hot-info">
-                        <span class="hot-title" x-text="item.title"></span>
-                        <span class="hot-id" x-text="'JM' + item.id"></span>
-                    </div>
-                    <div class="hot-actions">
-                        <a :href="'/browse/album/' + item.id" class="btn btn-sm btn-outline-info">
-                            <i class="bi bi-info-circle"></i>
-                        </a>
-                        <button class="btn btn-sm btn-outline-success"
-                                @click="quickDownload(item.id, item.title)">
-                            <i class="bi bi-download"></i>
-                        </button>
-                    </div>
-                </div>
-            </template>
-        </div>
-        <div x-show="loading" class="text-center py-4">
-            <div class="spinner-border spinner-border-sm text-secondary"></div>
-        </div>
-        <div x-show="!loading && items.length === 0" class="text-center py-4 text-secondary">
-            <p>获取热门列表失败</p>
-        </div>
-        <div class="text-center mt-3">
-            <a href="{{ url_for('search.index') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-right"></i> 查看更多
-            </a>
-        </div>
-    </div>
-</section>
-
-<!-- ============================================================
      快捷功能卡片区
      ============================================================ -->
 <section class="features-section">
@@ -223,46 +179,4 @@
     </div>
 </section>
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-function hotApp() {
-    return {
-        items: [],
-        loading: true,
-
-        async loadHot() {
-            try {
-                const resp = await fetch('/browse/api/hot?limit=8');
-                const data = await resp.json();
-                this.items = data.items || [];
-            } catch (e) {
-                console.error('加载热门列表失败:', e);
-                this.items = [];
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        quickDownload(id, title) {
-            fetch('/download/api/start', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({album_id: id}),
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.task_id) {
-                    showToast('success', `已添加下载: ${title || id}`);
-                    window.TaskManager?.startTracking(data.task_id, title || id);
-                }
-            })
-            .catch(e => {
-                showToast('error', `下载失败: ${e.message}`);
-            });
-        },
-    };
-}
-</script>
 {% endblock %}

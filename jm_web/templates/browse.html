@@ -3,89 +3,133 @@
 {% block page_class %}browse{% endblock %}
 {% block content %}
 
-<div x-data="browseApp()" x-init="init()">
+<!-- ============================================================
+     macOS 窗口壳：搜索浏览
+     ============================================================ -->
+<div class="mac-window">
 
-    <!-- 页面标题 -->
-    <div class="page-header">
-        <div class="page-header-accent" style="background:linear-gradient(180deg,var(--accent),var(--purple))"></div>
-        <h2><i class="bi bi-compass me-1" style="color:var(--accent)"></i>搜索浏览</h2>
-        <span class="page-header-desc">发现热门 & 精准搜索</span>
+    <!-- 窗口标题栏（红黄绿按钮） -->
+    <div class="mac-titlebar">
+        <div class="mac-traffic-lights">
+            <button class="mac-light-btn mac-light-close" title="关闭" onclick="window.location.href='/'"></button>
+            <button class="mac-light-btn mac-light-minimize" title="最小化"></button>
+            <button class="mac-light-btn mac-light-maximize" title="最大化"></button>
+        </div>
+        <div class="mac-titlebar-text">
+            <i class="bi bi-compass mac-icon"></i>搜索浏览
+        </div>
     </div>
 
-    <!-- Tab + 工具栏 -->
-    <div class="jm-card" style="margin-bottom:1.25rem">
-        <div class="jm-card-body">
-            <ul class="nav nav-pills mb-3">
-                <li class="nav-item">
-                    <button class="nav-link" :class="mode === 'hot' ? 'active' : ''"
-                            @click="switchMode('hot')"><i class="bi bi-fire me-1"></i>热门</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" :class="mode === 'rankings' ? 'active' : ''"
-                            @click="switchMode('rankings')"><i class="bi bi-bar-chart me-1"></i>排行榜</button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" :class="mode === 'search' ? 'active' : ''"
-                            @click="switchMode('search')"><i class="bi bi-search me-1"></i>搜索</button>
-                </li>
-            </ul>
+    <!-- 主体：侧边栏 + 内容 -->
+    <div class="mac-body">
 
-            <!-- 热门 -->
-            <div x-show="mode === 'hot'" class="d-flex align-items-center gap-2 flex-wrap">
-                <span style="font-size:.83rem;color:var(--fg-muted)"><i class="bi bi-fire" style="color:var(--warning)"></i> 本周热门本子</span>
-                <button class="btn btn-outline-secondary btn-sm" @click="page = 1; doHot()" :disabled="loading">
-                    <i class="bi bi-arrow-clockwise me-1"></i><span x-show="!loading">刷新</span><span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
-                </button>
+        <!-- 毛玻璃侧边栏 -->
+        <aside class="mac-sidebar">
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">导航</div>
+                <a href="{{ url_for('search.index') }}" class="mac-sidebar-item active">
+                    <i class="bi bi-compass"></i>搜索浏览
+                </a>
+                <a href="{{ url_for('download.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-download"></i>下载管理
+                </a>
+                <a href="{{ url_for('files.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-folder2-open"></i>文件浏览
+                </a>
+                <a href="{{ url_for('favorites.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-heart"></i>书签管理
+                </a>
+            </div>
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">快捷</div>
+                <a href="/" class="mac-sidebar-item">
+                    <i class="bi bi-house-door"></i>返回首页
+                </a>
+                <a href="{{ url_for('config.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-gear"></i>系统配置
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="mac-main" x-data="browseApp()" x-init="init()">
+
+            <!-- Tab 切换 -->
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div class="mac-tabs">
+                    <button class="mac-tab" :class="{ 'active': mode === 'hot' }"
+                            @click="switchMode('hot')"><i class="bi bi-fire"></i>热门</button>
+                    <button class="mac-tab" :class="{ 'active': mode === 'rankings' }"
+                            @click="switchMode('rankings')"><i class="bi bi-bar-chart"></i>排行榜</button>
+                    <button class="mac-tab" :class="{ 'active': mode === 'search' }"
+                            @click="switchMode('search')"><i class="bi bi-search"></i>搜索</button>
+                </div>
+
+                <!-- 热门刷新 -->
+                <div x-show="mode === 'hot'" style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:.78rem;color:var(--text-muted)"><i class="bi bi-fire" style="color:var(--accent)"></i> 本周热门</span>
+                    <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                            @click="page = 1; doHot()" :disabled="loading">
+                        <i class="bi bi-arrow-clockwise"></i><span x-show="!loading">刷新</span>
+                        <span x-show="loading" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                    </button>
+                </div>
             </div>
 
-            <!-- 排行榜 -->
-            <div x-show="mode === 'rankings'" class="row g-2 align-items-end">
-                <div class="col-auto">
-                    <label class="form-label d-block" style="font-size:.76rem;color:var(--fg-dim)">时间范围</label>
-                    <select class="form-select form-select-sm" style="width:120px" x-model="rankTime">
+            <!-- 排行榜筛选 -->
+            <div x-show="mode === 'rankings'"
+                 style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px;">
+                <div class="mac-form-group" style="margin-bottom:0">
+                    <label class="mac-form-label">时间范围</label>
+                    <select class="mac-select" style="width:130px" x-model="rankTime">
                         <option value="ALL">全部时间</option>
                         <option value="TODAY">今日</option>
                         <option value="WEEK" selected>本周</option>
                         <option value="MONTH">本月</option>
                     </select>
                 </div>
-                <div class="col-auto">
-                    <label class="form-label d-block" style="font-size:.76rem;color:var(--fg-dim)">排序方式</label>
-                    <select class="form-select form-select-sm" style="width:120px" x-model="rankOrder">
+                <div class="mac-form-group" style="margin-bottom:0">
+                    <label class="mac-form-label">排序方式</label>
+                    <select class="mac-select" style="width:130px" x-model="rankOrder">
                         <option value="VIEW" selected>按观看量</option>
                         <option value="LIKE">按点赞数</option>
                         <option value="LATEST">按最新发布</option>
                     </select>
                 </div>
-                <div class="col-auto">
-                    <button class="btn btn-outline-secondary btn-sm" @click="page = 1; doRankings()" :disabled="loading">
-                        <i class="bi bi-arrow-clockwise me-1"></i><span x-show="!loading">刷新</span><span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
-                    </button>
+                <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                        @click="page = 1; doRankings()" :disabled="loading">
+                    <i class="bi bi-arrow-clockwise"></i><span x-show="!loading">刷新</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span>
+                </button>
+            </div>
+
+            <!-- 搜索栏 -->
+            <div x-show="mode === 'search'" class="mac-search-bar">
+                <input type="text" class="mac-search-input"
+                       placeholder="输入关键字、标签、作者名..." x-model="searchQuery"
+                       @keyup.enter="page = 1; doSearch()">
+                <i class="bi bi-search mac-search-icon"></i>
+                <button class="mac-btn mac-btn-primary mac-btn-sm"
+                        style="position:absolute;right:6px;top:50%;transform:translateY(-50%)"
+                        @click="page = 1; doSearch()" :disabled="loading">
+                    <i class="bi bi-search"></i><span x-show="!loading">搜索</span>
+                    <span x-show="loading" class="spinner-border spinner-border-sm" style="width:13px;height:13px;border-width:2px;"></span>
+                </button>
+            </div>
+
+            <!-- HTMX 结果区域 -->
+            <div id="search-results-area" hx-get="" hx-trigger="load"
+                 style="flex:1">
+                <div class="mac-empty-state">
+                    <i class="bi bi-hourglass-split mac-empty-icon"></i>
+                    <p class="mac-empty-text">加载中...</p>
                 </div>
             </div>
 
-            <!-- 搜索 -->
-            <div x-show="mode === 'search'" class="row g-2 align-items-end">
-                <div class="col-md-6 col-lg-7">
-                    <input type="text" class="form-control"
-                           placeholder="输入关键字、标签、作者名..." x-model="searchQuery"
-                           @keyup.enter="page = 1; doSearch()">
-                </div>
-                <div class="col-auto">
-                    <button class="btn btn-warning btn-sm" @click="page = 1; doSearch()" :disabled="loading">
-                        <i class="bi bi-search me-1"></i><span x-show="!loading">搜索</span><span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
-                    </button>
-                </div>
-            </div>
-        </div>
+        </main>
     </div>
-
-    <!-- HTMX 结果区域 -->
-    <div id="search-results-area" hx-get="" hx-trigger="load">
-        <div class="empty-state"><div class="spinner-border spinner-border-sm" style="color:var(--fg-muted)"></div></div>
-    </div>
-
 </div>
+
 {% endblock %}
 
 {% block scripts %}

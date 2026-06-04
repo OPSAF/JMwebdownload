@@ -3,185 +3,271 @@
 {% block page_class %}favorites{% endblock %}
 {% block content %}
 
-<div x-data="bookmarksApp()" x-init="init()">
+<!-- ============================================================
+     macOS 窗口壳：书签管理 (Safari 收藏夹风格)
+     ============================================================ -->
+<div class="mac-window">
 
-    <!-- 页面标题 -->
-    <div class="page-header">
-        <div class="page-header-accent" style="background:linear-gradient(180deg,#ec4899,#8b5cf6)"></div>
-        <h2><i class="bi bi-bookmark me-1" style="color:#ec4899"></i>书签管理</h2>
-        <span class="page-header-desc">本地收藏 & 批量操作</span>
+    <!-- 窗口标题栏 -->
+    <div class="mac-titlebar">
+        <div class="mac-traffic-lights">
+            <button class="mac-light-btn mac-light-close" title="关闭" onclick="window.location.href='/'"></button>
+            <button class="mac-light-btn mac-light-minimize" title="最小化"></button>
+            <button class="mac-light-btn mac-light-maximize" title="最大化"></button>
+        </div>
+        <div class="mac-titlebar-text">
+            <i class="bi bi-bookmark mac-icon"></i>书签管理
+        </div>
     </div>
 
-    <div class="row">
-        <!-- 左侧：书签列表 -->
-        <div class="col-lg-8">
-            <div class="jm-card mb-0">
-                <!-- 卡片头部 -->
-                <div class="jm-card-header">
-                    <span class="jm-card-title"><i class="bi bi-bookmarks" style="color:var(--accent)"></i> 我的书签</span>
-                    <div style="display:flex;gap:.35rem">
-                        <button class="btn btn-outline-success btn-sm" @click="exportJSON()" :disabled="exporting"><i class="bi bi-download me-1"></i>JSON</button>
-                        <button class="btn btn-outline-info btn-sm" @click="exportCSV()" :disabled="exporting"><i class="bi bi-file-text me-1"></i>CSV</button>
+    <div class="mac-body">
+
+        <!-- 毛玻璃侧边栏 -->
+        <aside class="mac-sidebar">
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">导航</div>
+                <a href="{{ url_for('search.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-compass"></i>搜索浏览
+                </a>
+                <a href="{{ url_for('download.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-download"></i>下载管理
+                </a>
+                <a href="{{ url_for('files.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-folder2-open"></i>文件浏览
+                </a>
+                <a href="{{ url_for('favorites.index') }}" class="mac-sidebar-item active">
+                    <i class="bi bi-heart"></i>书签管理
+                </a>
+            </div>
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">快捷</div>
+                <a href="/" class="mac-sidebar-item">
+                    <i class="bi bi-house-door"></i>返回首页
+                </a>
+                <a href="{{ url_for('config.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-gear"></i>系统配置
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="mac-main" x-data="bookmarksApp()" x-init="init()">
+
+            <!-- 标签筛选条 -->
+            <div x-show="tags.length > 0" class="mac-tag-filter">
+                <span style="font-size:.76rem;color:var(--text-muted);font-weight:600;margin-right:4px;">标签:</span>
+                <button class="mac-tag-pill" :class="{ active: !selectedTag }"
+                        @click="selectedTag = ''; loadData()">全部</button>
+                <template x-for="tag in tags">
+                    <button class="mac-tag-pill" :class="{ active: selectedTag === tag }"
+                            @click="selectedTag = tag; loadData()"
+                            x-text="tag"></button>
+                </template>
+            </div>
+
+            <!-- 添加新书签 -->
+            <div class="mac-panel">
+                <div class="mac-panel-body" style="padding:12px 16px;">
+                    <form @submit.prevent="addBookmark()"
+                          style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                        <div class="mac-form-group" style="margin-bottom:0;min-width:140px;">
+                            <input type="text" class="mac-input" placeholder="本子ID" x-model="newAlbumId"
+                                   @keyup.enter="addBookmark()">
+                        </div>
+                        <div class="mac-form-group" style="margin-bottom:0;min-width:170px;">
+                            <input type="text" class="mac-input" placeholder="标题（可选）" x-model="newTitle">
+                        </div>
+                        <div class="mac-form-group" style="margin-bottom:0;min-width:150px;">
+                            <input type="text" class="mac-input" placeholder="标签,逗号分隔" x-model="newTags">
+                        </div>
+                        <button type="submit" class="mac-btn mac-btn-primary mac-btn-sm" :disabled="adding">
+                            <span x-show="!adding"><i class="bi bi-plus-lg"></i>添加</span>
+                            <span x-show="adding" class="spinner-border spinner-border-sm"
+                                  style="width:14px;height:14px;border-width:2px;"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 批量操作栏 -->
+            <div x-show="selectedIds.length > 0"
+                 class="mac-panel" style="background:rgba(56,139,253,0.06);border-color:rgba(56,139,253,0.2)">
+                <div class="mac-panel-body" style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:.84rem;color:var(--text-primary)">
+                        已选择 <strong x-text="selectedIds.length" style="color:var(--accent)"></strong> 个
+                    </span>
+                    <div style="display:flex;gap:6px;">
+                        <button class="mac-btn mac-btn-success mac-btn-sm" @click="batchDownload()">
+                            <i class="bi bi-download"></i>批量下载
+                        </button>
+                        <button class="mac-btn mac-btn-danger mac-btn-sm" @click="batchRemove()">
+                            <i class="bi bi-trash"></i>批量删除
+                        </button>
                     </div>
                 </div>
-                <div class="jm-card-body">
+            </div>
 
-                    <!-- 标签筛选 -->
-                    <div x-show="tags.length > 0"
-                         style="display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;margin-bottom:.75rem;padding-bottom:.65rem;border-bottom:1px solid var(--border-subtle)">
-                        <span style="font-size:.76rem;color:var(--fg-dim)">标签:</span>
-                        <button class="tag-badge" :class="{ active: !selectedTag }" @click="selectedTag = ''; loadData()">全部</button>
-                        <template x-for="tag in tags">
-                            <button class="tag-badge" :class="{ active: selectedTag === tag }"
-                                    @click="selectedTag = tag; loadData()"
-                                    x-text="tag"></button>
+            <!-- 书签列表 + 右侧统计 -->
+            <div style="display:flex;gap:16px;flex:1;min-height:0;">
+
+                <!-- 书签列表 -->
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+
+                    <!-- 列表头部 -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px;">
+                        <span class="mac-panel-title" style="font-size:.88rem">
+                            <i class="bi bi-bookmarks"></i>我的书签
+                        </span>
+                        <div style="display:flex;gap:5px;">
+                            <button class="mac-btn mac-btn-success mac-btn-sm" @click="exportJSON()" :disabled="exporting">
+                                <i class="bi bi-download"></i>JSON
+                            </button>
+                            <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="exportCSV()" :disabled="exporting">
+                                <i class="bi bi-file-text"></i>CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 书签卡片网格 -->
+                    <div x-show="items.length > 0" class="mac-bookmark-grid" style="flex:1;overflow-y:auto;padding-right:4px;">
+                        <template x-for="item in items">
+                            <div class="mac-bookmark-card">
+                                <div class="mac-bookmark-check">
+                                    <input type="checkbox" :checked="selectedIds.includes(item.album_id)"
+                                           @change="toggleSelect(item.album_id)">
+                                </div>
+                                <div class="mac-bookmark-body">
+                                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                                        <span class="mac-task-id-badge" style="font-size:.68rem;padding:1px 7px">JM<span x-text="item.album_id"></span></span>
+                                    </div>
+                                    <div class="mac-bookmark-title" x-text="item.title || ('#' + item.album_id)"></div>
+                                    <div x-show="item.tags && item.tags.length > 0" class="mac-bookmark-tags">
+                                        <template x-for="tag in item.tags.slice(0,3)">
+                                            <span class="mac-tag-chip" x-text="tag"></span>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="mac-bookmark-actions">
+                                    <a :href="'/browse/album/' + item.album_id" class="mac-action-btn" title="详情">
+                                        <i class="bi bi-info-circle"></i>
+                                    </a>
+                                    <button class="mac-action-btn btn-success-hover" title="下载"
+                                            @click="downloadAlbum(item.album_id, item.title)">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="mac-action-btn" title="编辑"
+                                            @click="editBookmark(item)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="mac-action-btn btn-danger-hover" title="删除"
+                                            @click="removeBookmark(item.album_id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </template>
                     </div>
 
-                    <!-- 添加新书签 -->
-                    <div style="background:var(--surface-raised);border-radius:var(--radius-sm);padding:.85rem;margin-bottom:.75rem;border:1px dashed var(--border-default)">
-                        <form @submit.prevent="addBookmark()">
-                            <div style="display:flex;gap:.4rem;align-items:flex-end;flex-wrap:wrap">
-                                <input type="text" class="form-control form-control-sm" style="max-width:180px"
-                                       placeholder="本子ID" x-model="newAlbumId" @keyup.enter="addBookmark()">
-                                <input type="text" class="form-control form-control-sm" style="max-width:200px"
-                                       placeholder="标题（可选）" x-model="newTitle">
-                                <input type="text" class="form-control form-control-sm" style="max-width:160px"
-                                       placeholder="标签,逗号分隔" x-model="newTags">
-                                <button type="submit" class="btn btn-primary btn-sm" :disabled="adding">
-                                    <span x-show="!adding"><i class="bi bi-plus me-1"></i>添加</span>
-                                    <span x-show="adding"><span class="spinner-border spinner-border-sm"></span></span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- 批量操作栏 -->
-                    <div x-show="selectedIds.length > 0" class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-0" style="margin-bottom:.6rem">
-                        <span style="font-size:.84rem">已选择 <strong x-text="selectedIds.length"></strong> 个</span>
-                        <div style="display:flex;gap:.35rem">
-                            <button class="btn btn-success btn-sm" @click="batchDownload()"><i class="bi bi-download me-1"></i>批量下载</button>
-                            <button class="btn btn-danger btn-sm" @click="batchRemove()"><i class="bi bi-trash me-1"></i>批量删除</button>
-                        </div>
-                    </div>
-
-                    <!-- 书签列表 -->
-                    <div x-show="items.length > 0">
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <template x-for="item in items">
-                                <div class="result-item">
-                                    <div class="result-left">
-                                        <label class="checkbox-label m-0">
-                                            <input type="checkbox" :checked="selectedIds.includes(item.album_id)"
-                                                   @change="toggleSelect(item.album_id)">
-                                        </label>
-                                        <span class="badge-id">JM<span x-text="item.album_id"></span></span>
-                                        <span class="result-title" x-text="item.title || ('#' + item.album_id)"></span>
-                                        <template x-if="item.tags && item.tags.length > 0">
-                                            <span style="display:inline-flex;gap:3px;margin-left:.25rem">
-                                                <template x-for="tag in item.tags.slice(0,3)">
-                                                    <span class="tag-badge-small" x-text="tag"></span>
-                                                </template>
-                                            </span>
-                                        </template>
-                                    </div>
-                                    <div class="result-actions">
-                                        <a :href="'/browse/album/' + item.album_id" class="btn btn-outline-info btn-sm" title="详情"><i class="bi bi-info-circle"></i></a>
-                                        <button class="btn btn-outline-success btn-sm" title="下载" @click="downloadAlbum(item.album_id, item.title)"><i class="bi bi-download"></i></button>
-                                        <button class="btn btn-outline-warning btn-sm" title="编辑" @click="editBookmark(item)"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-outline-danger btn-sm" title="删除" @click="removeBookmark(item.album_id)"><i class="bi bi-trash"></i></button>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
                     <!-- 空状态 -->
-                    <div x-show="items.length === 0 && !loading" class="empty-state">
-                        <i class="bi bi-bookmark-x empty-icon"></i>
-                        <p class="empty-text">暂无书签</p>
-                        <p class="empty-hint">添加一些吧~</p>
+                    <div x-show="items.length === 0 && !loading" class="mac-empty-state">
+                        <i class="bi bi-bookmark-x mac-empty-icon"></i>
+                        <p class="mac-empty-text">暂无书签</p>
+                        <p class="mac-empty-hint">添加一些吧~</p>
                     </div>
 
                     <!-- 加载中 -->
-                    <div x-show="loading" style="text-align:center;padding:1.5rem 0">
-                        <div class="spinner-border spinner-border-sm" style="color:var(--fg-muted)"></div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- 右侧：导入 + 统计 -->
-        <div class="col-lg-4 mt-3 mt-lg-0">
-            <!-- 导入面板 -->
-            <div class="jm-card" style="margin-bottom:1rem">
-                <div class="jm-card-header">
-                    <span class="jm-card-title"><i class="bi bi-upload" style="color:var(--accent)"></i> 导入书签</span>
-                </div>
-                <div class="jm-card-body">
-                    <textarea class="form-control form-control-sm" rows="5"
-                              placeholder="粘贴 JSON 格式的书签数据..."
-                              x-model="importData"></textarea>
-                    <button class="btn btn-primary btn-sm w-100 mt-2" @click="importBookmarks()" :disabled="importing">
-                        <span x-show="!importing"><i class="bi bi-upload me-1"></i>导入</span>
-                        <span x-show="importing"><span class="spinner-border spinner-border-sm me-1"></span>导入中</span>
-                    </button>
-                    <div x-show="importMsg" class="alert py-1 px-2 mt-2" :class="importOk ? 'alert-success' : 'alert-danger'" x-text="importMsg"></div>
-                    <small style="display:block;margin-top:.35rem;font-size:.73rem;color:var(--fg-dim)">支持从其他设备导出的 JSON 文件，自动去重</small>
-                </div>
-            </div>
-
-            <!-- 统计信息 -->
-            <div class="jm-card">
-                <div class="jm-card-header">
-                    <span class="jm-card-title"><i class="bi bi-bar-chart" style="color:var(--purple)"></i> 统计</span>
-                </div>
-                <div class="jm-card-body">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;text-align:center">
-                        <div>
-                            <div class="stat-value" x-text="items.length"></div>
-                            <div class="stat-label">书签总数</div>
-                        </div>
-                        <div>
-                            <div class="stat-value" x-text="tags.length"></div>
-                            <div class="stat-label">标签数量</div>
-                        </div>
+                    <div x-show="loading" class="mac-empty-state">
+                        <i class="bi bi-hourglass-split mac-empty-icon"></i>
+                        <p class="mac-empty-text">加载中...</p>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- 编辑弹窗 -->
-    <div x-show="editingItem !== null" class="modal-overlay" @click.self="closeEdit()">
-        <div class="modal-dialog-custom">
-            <div class="modal-hdr">
-                <span>编辑书签</span>
-                <button @click="closeEdit()" class="btn-close"></button>
-            </div>
-            <div class="modal-bdy">
-                <div style="margin-bottom:.7rem">
-                    <label class="form-label">本子ID（只读）</label>
-                    <input type="text" class="form-control form-control-sm" x-model="editingItem.album_id" disabled>
-                </div>
-                <div style="margin-bottom:.7rem">
-                    <label class="form-label">标题</label>
-                    <input type="text" class="form-control form-control-sm" x-model="editingItem.title">
-                </div>
-                <div style="margin-bottom:0">
-                    <label class="form-label">标签（逗号分隔）</label>
-                    <input type="text" class="form-control form-control-sm" x-model="editingTagsStr">
-                </div>
-            </div>
-            <div class="modal-ftr">
-                <button class="btn btn-secondary btn-sm" @click="closeEdit()">取消</button>
-                <button class="btn btn-primary btn-sm" @click="saveEdit()">保存</button>
-            </div>
-        </div>
-    </div>
+                <!-- 右侧：导入 + 统计 -->
+                <div style="width:260px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;">
 
+                    <!-- 导入面板 -->
+                    <div class="mac-panel">
+                        <div class="mac-panel-header">
+                            <span class="mac-panel-title">
+                                <i class="bi bi-upload"></i>导入书签
+                            </span>
+                        </div>
+                        <div class="mac-panel-body">
+                            <textarea class="form-control form-control-sm" rows="4"
+                                      placeholder="粘贴 JSON 格式的书签数据..."
+                                      x-model="importData"
+                                      style="font-size:.82rem;border-radius:8px;border-color:var(--input-border);background:var(--input-bg);color:var(--text-primary);resize:none"></textarea>
+                            <button class="mac-btn mac-btn-primary mac-btn-sm w-100 mt-2"
+                                    @click="importBookmarks()" :disabled="importing">
+                                <span x-show="!importing"><i class="bi bi-upload"></i>导入</span>
+                                <span x-show="importing" class="spinner-border spinner-border-sm"
+                                      style="width:14px;height:14px;border-width:2px;"></span>
+                            </button>
+                            <div x-show="importMsg" class="alert py-1 px-2 mt-2"
+                                 :class="importOk ? 'alert-success' : 'alert-danger'" x-text="importMsg"
+                                 style="border-radius:8px;font-size:.8rem"></div>
+                            <small style="display:block;margin-top:4px;font-size:.71rem;color:var(--text-muted)">
+                                支持从其他设备导出的 JSON 文件，自动去重
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- 统计信息 -->
+                    <div class="mac-panel">
+                        <div class="mac-panel-header">
+                            <span class="mac-panel-title">
+                                <i class="bi bi-pie-chart" style="color:var(--purple)"></i>统计
+                            </span>
+                        </div>
+                        <div class="mac-panel-body">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                <div class="mac-stat-card">
+                                    <div class="mac-stat-value" x-text="items.length"></div>
+                                    <div class="mac-stat-label">书签总数</div>
+                                </div>
+                                <div class="mac-stat-card">
+                                    <div class="mac-stat-value" x-text="tags.length"></div>
+                                    <div class="mac-stat-label">标签数量</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
 </div>
+
+<!-- 编辑弹窗 (macOS 风格模态框) -->
+<div x-show="editingItem !== null" class="mac-modal-overlay" @click.self="closeEdit()">
+    <div class="mac-modal-dialog">
+        <div class="mac-modal-header">
+            <span>编辑书签</span>
+            <button @click="closeEdit()" class="btn-close" style="opacity:.5"></button>
+        </div>
+        <div class="mac-modal-body">
+            <div class="mac-form-group">
+                <label class="mac-form-label">本子ID（只读）</label>
+                <input type="text" class="mac-input" x-model="editingItem.album_id" disabled
+                       style="opacity:.55">
+            </div>
+            <div class="mac-form-group">
+                <label class="mac-form-label">标题</label>
+                <input type="text" class="mac-input" x-model="editingItem.title">
+            </div>
+            <div class="mac-form-group" style="margin-bottom:0">
+                <label class="mac-form-label">标签（逗号分隔）</label>
+                <input type="text" class="mac-input" x-model="editingTagsStr">
+            </div>
+        </div>
+        <div class="mac-modal-footer">
+            <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="closeEdit()">取消</button>
+            <button class="mac-btn mac-btn-primary mac-btn-sm" @click="saveEdit()">保存</button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -227,9 +313,9 @@ function bookmarksApp(){
         },
 
         async removeBookmark(id){
-            if(!confirm('\u786e\u5b9a\u5220\u9664\uff1f'))return;
+            if(!confirm('确定删除？'))return;
             var r=await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id})});
-            if(r.ok){showToast('success','\u5220\u9664\u6210\u529f'); await this.loadData();}
+            if(r.ok){showToast('success','删除成功'); await this.loadData();}
             else{var d=await r.json();showToast('error',d.error);}
         },
 
@@ -240,13 +326,13 @@ function bookmarksApp(){
             if(!this.editingItem)return;
             var tgs=this.editingTagsStr?this.editingTagsStr.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}):[];
             var r=await fetch('/favorites/api/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.editingItem.album_id,title:this.editingItem.title,tags:tgs})});
-            if(r.ok){showToast('success','\u66f4\u65b0\u6210\u529f');this.closeEdit();await this.loadData();}
+            if(r.ok){showToast('success','更新成功');this.closeEdit();await this.loadData();}
             else{var d=await r.json();showToast('error',d.error);}
         },
 
         async downloadAlbum(id,title){
             try{var r=await fetch('/download/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id})});var d=await r.json();
-            if(d.task_id){showToast('success','\u5df2\u6dfb\u52a0:'+(title||id));window.TaskManager&&window.TaskManager.startTracking(d.task_id,title||id);}}
+            if(d.task_id){showToast('success','已添加:'+(title||id));window.TaskManager&&window.TaskManager.startTracking(d.task_id,title||id);}}
             catch(e){showToast('error',e.message);}
         },
 
@@ -254,14 +340,14 @@ function bookmarksApp(){
             if(!this.selectedIds.length)return;
             var r=await fetch('/favorites/api/batch/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_ids:this.selectedIds})});
             var d=await r.json();
-            if(r.ok){showToast('success','\u5df2\u6dfb\u52a0 '+d.count+' \u4e2a\u4efb\u52a1');this.selectedIds=[];window.location.href='/download';}
+            if(r.ok){showToast('success','已添加 '+d.count+' 个任务');this.selectedIds=[];window.location.href='/download';}
             else showToast('error',d.error);
         },
 
         async batchRemove(){
-            if(!this.selectedIds.length||!confirm('\u786e\u5b9a\u5220\u9664 '+this.selectedIds.length+' \u4e2a\u4e66\u7b7e\uff1f'))return;
-            for(var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i]})});
-            showToast('success','\u6279\u91cf\u5220\u9664\u5b8c\u6210');this.selectedIds=[];await this.loadData();
+            if(!this.selectedIds.length||!confirm('确定删除 '+this.selectedIds.length+' 个书签？'))return;
+            for(var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i])});
+            showToast('success','批量删除完成');this.selectedIds=[];await this.loadData();
         },
 
         async exportJSON(){this.exporting=true;try{window.open('/favorites/api/export/json','_blank')}finally{this.exporting=false}},
@@ -270,8 +356,8 @@ function bookmarksApp(){
         async importBookmarks(){
             if(!this.importData.trim())return;
             this.importing=true;
-            try{var r=await fetch('/favorites/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:this.importData.trim()})});var d=await r.json();this.importOk=r.ok;this.importMsg=r.ok?d.message:d.error;if(r.ok){this.importData='';await this.loadData();}}
-            catch(e){this.importOk=false;this.importMsg=e.message;}
+            try{var r=await fetch('/favorites/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:this.importData.trim()})});var d=await r.json();this.importOk=r.ok;this.msg=r.ok?d.message:d.error;if(r.ok){this.importData='';await this.loadData();}}
+            catch(e){this.importOk=false;this.msg=e.message;}
             finally{this.importing=false;}
         },
     };

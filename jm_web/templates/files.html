@@ -3,55 +3,136 @@
 {% block page_class %}files{% endblock %}
 {% block content %}
 
-<div class="row">
-    <!-- 左侧：文件树 -->
-    <div class="col-lg-8">
-        <div class="page-header" style="margin-bottom:1rem">
-            <div class="page-header-accent" style="background:linear-gradient(180deg,#f59e0b,#ef4444)"></div>
-            <h2 style="font-size:1.15rem"><i class="bi bi-folder2-open me-1" style="color:#f59e0b"></i>文件浏览器</h2>
-            <button class="btn btn-outline-info btn-sm ms-auto" onclick="htmx.trigger('#file-tree','reload')" style="margin-left:auto">
-                <i class="bi bi-arrow-clockwise me-1"></i>刷新
-            </button>
+<!-- ============================================================
+     macOS 窗口壳：文件浏览 (Finder 风格)
+     ============================================================ -->
+<div class="mac-window">
+
+    <!-- 窗口标题栏 -->
+    <div class="mac-titlebar">
+        <div class="mac-traffic-lights">
+            <button class="mac-light-btn mac-light-close" title="关闭" onclick="window.location.href='/'"></button>
+            <button class="mac-light-btn mac-light-minimize" title="最小化"></button>
+            <button class="mac-light-btn mac-light-maximize" title="最大化"></button>
         </div>
-        <div class="jm-card">
-            <div class="jm-card-body" style="padding:.6rem">
-                <div id="file-tree" hx-get="/files/browse" hx-trigger="load, reload from:body" hx-swap="innerHTML">
-                    <div class="empty-state"><div class="spinner-border spinner-border-sm" style="color:var(--fg-muted)"></div></div>
-                </div>
-            </div>
+        <div class="mac-titlebar-text">
+            <i class="bi bi-folder2-open mac-icon"></i>文件浏览器
         </div>
     </div>
 
-    <!-- 右侧：工具栏 -->
-    <div class="col-lg-4 mt-3 mt-lg-0">
-        <!-- 导出 -->
-        <div class="jm-card" style="margin-bottom:1rem" x-data="exportPanel()">
-            <div class="jm-card-header">
-                <span class="jm-card-title"><i class="bi bi-file-earmark-arrow-up" style="color:var(--warning)"></i> 导出工具</span>
-            </div>
-            <div class="jm-card-body">
-                <div style="margin-bottom:.65rem">
-                    <label class="form-label">目标路径（相对于下载目录）</label>
-                    <input type="text" class="form-control form-control-sm" placeholder="例如: JM12345" x-model="exportPath">
-                </div>
-                <div style="display:flex;gap:.35rem;flex-wrap:wrap">
-                    <button class="btn btn-outline-danger btn-sm" @click="doExport('pdf')" :disabled="exporting"><i class="bi bi-file-pdf me-1"></i>PDF</button>
-                    <button class="btn btn-outline-warning btn-sm" @click="doExport('zip')" :disabled="exporting"><i class="bi bi-file-zip me-1"></i>ZIP</button>
-                    <button class="btn btn-outline-info btn-sm" @click="doExport('long_img')" :disabled="exporting"><i class="bi bi-image me-1"></i>长图</button>
-                </div>
-                <div x-show="msg" class="alert py-1 px-2 mt-2" :class="ok ? 'alert-success' : 'alert-danger'" x-text="msg"></div>
-            </div>
-        </div>
+    <div class="mac-body">
 
-        <!-- 统计 -->
-        <div class="jm-card">
-            <div class="jm-card-header">
-                <span class="jm-card-title"><i class="bi bi-bar-chart" style="color:var(--accent)"></i> 存储统计</span>
+        <!-- 毛玻璃侧边栏 -->
+        <aside class="mac-sidebar">
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">导航</div>
+                <a href="{{ url_for('search.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-compass"></i>搜索浏览
+                </a>
+                <a href="{{ url_for('download.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-download"></i>下载管理
+                </a>
+                <a href="{{ url_for('files.index') }}" class="mac-sidebar-item active">
+                    <i class="bi bi-folder2-open"></i>文件浏览
+                </a>
+                <a href="{{ url_for('favorites.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-heart"></i>书签管理
+                </a>
             </div>
-            <div class="jm-card-body" id="storage-stats" hx-get="/files/browse" hx-trigger="load once"></div>
-        </div>
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">快捷</div>
+                <a href="/" class="mac-sidebar-item">
+                    <i class="bi bi-house-door"></i>返回首页
+                </a>
+                <a href="{{ url_for('config.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-gear"></i>系统配置
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="mac-main">
+
+            <!-- 工具栏 + 文件树 -->
+            <div style="display:flex;gap:16px;flex-direction:column;flex:1;">
+
+                <!-- 左侧：文件树 -->
+                <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;">
+
+                    <!-- 工具栏行 -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:6px;font-size:.84rem;color:var(--text-primary)">
+                            <i class="bi bi-folder2-open" style="color:#F59E0B;font-size:1.05rem"></i>
+                            <strong>本地文件</strong>
+                        </div>
+                        <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                                onclick="htmx.trigger('#file-tree','reload')">
+                            <i class="bi bi-arrow-clockwise"></i>刷新
+                        </button>
+                    </div>
+
+                    <!-- 文件列表容器 (Finder 风格) -->
+                    <div class="mac-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                        <div class="mac-panel-body" style="padding:10px 14px;overflow-y:auto;flex:1;" id="file-tree"
+                             hx-get="/files/browse" hx-trigger="load, reload from:body" hx-swap="innerHTML">
+                            <div class="mac-empty-state" style="padding:2rem 1rem">
+                                <i class="bi bi-hourglass-split mac-empty-icon"></i>
+                                <p class="mac-empty-text">加载中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧工具栏（导出 + 统计） -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" x-data="exportPanel()">
+                    <!-- 导出面板 -->
+                    <div class="mac-panel">
+                        <div class="mac-panel-header">
+                            <span class="mac-panel-title">
+                                <i class="bi bi-file-earmark-arrow-up" style="color:var(--warning)"></i>导出工具
+                            </span>
+                        </div>
+                        <div class="mac-panel-body">
+                            <div class="mac-form-group">
+                                <label class="mac-form-label">目标路径（相对于下载目录）</label>
+                                <input type="text" class="mac-input" placeholder="例如: JM12345" x-model="exportPath">
+                            </div>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                                <button class="mac-btn mac-btn-danger mac-btn-sm" @click="doExport('pdf')" :disabled="exporting">
+                                    <i class="bi bi-file-pdf"></i>PDF
+                                </button>
+                                <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="doExport('zip')" :disabled="exporting"
+                                        style="--tw-text-opacity:1;color:#F59E0B;border-color:rgba(245,158,11,.3)">
+                                    <i class="bi bi-file-zip"></i>ZIP
+                                </button>
+                                <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="doExport('long_img')" :disabled="exporting"
+                                        style="color:var(--accent);border-color:rgba(var(--accent-rgb),.3)">
+                                    <i class="bi bi-image"></i>长图
+                                </button>
+                            </div>
+                            <div x-show="msg" class="alert py-1 px-2 mt-2" :class="ok ? 'alert-success' : 'alert-danger'" x-text="msg"
+                                 style="border-radius:8px;font-size:.82rem"></div>
+                        </div>
+                    </div>
+
+                    <!-- 统计面板 -->
+                    <div class="mac-panel">
+                        <div class="mac-panel-header">
+                            <span class="mac-panel-title">
+                                <i class="bi bi-bar-chart"></i>存储统计
+                            </span>
+                        </div>
+                        <div class="mac-panel-body" id="storage-stats"
+                             hx-get="/files/browse" hx-trigger="load once">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}

@@ -1311,3 +1311,1384 @@ main.container-fluid {
     color: var(--text-primary) !important;
     border-color: var(--input-border) !important;
 }
+
+
+/* ============================================================
+   ============================================================
+   🍎  MACOS DESIGN SYSTEM — 子页面重构
+   ============================================================
+   ============================================================ */
+
+/* ---------- 主内容区：修复导航栏遮挡 Bug ---------- */
+.main-content {
+    padding-top: calc(56px + 1.5rem);
+    min-height: calc(100vh - 56px);
+}
+
+body.page-index .main-content {
+    padding-top: 0;
+}
+
+
+/* ============================================================
+   macOS 窗口壳（Window Shell）
+   所有子页面包裹在这个容器内，模拟独立 App 窗口
+   ============================================================ */
+.mac-window {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--border-glass);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.08),
+        0 12px 48px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    animation: macWindowIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+}
+
+@keyframes macWindowIn {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* ---- 窗口标题栏（含红黄绿按钮）---- */
+.mac-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px 10px;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        transparent 100%
+    );
+    border-bottom: 1px solid var(--border-glass);
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.mac-traffic-lights {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mac-light-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    border: none;
+    outline: none;
+    padding: 0;
+    box-sizing: content-box;
+}
+
+.mac-light-btn::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    transition: opacity 0.15s ease;
+    opacity: 0;
+}
+
+.mac-light-btn:hover::after { opacity: 1; }
+
+.mac-light-close {
+    background: #FF5F57;
+}
+.mac-light-close::after { box-shadow: 0 0 8px rgba(255, 95, 87, 0.6); }
+
+.mac-light-minimize {
+    background: #FEBC2E;
+}
+.mac-light-minimize::after { box-shadow: 0 0 8px rgba(254, 188, 46, 0.6); }
+
+.mac-light-maximize {
+    background: #28C840;
+}
+.mac-light-maximize::after { box-shadow: 0 0 8px rgba(40, 200, 64, 0.6); }
+
+.mac-titlebar-text {
+    flex: 1;
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 52px; /* balance traffic lights */
+}
+
+.mac-titlebar-text .mac-icon {
+    margin-right: 6px;
+    color: var(--accent);
+}
+
+
+/* ---- 窗口主体布局：侧边栏 + 内容区 ---- */
+.mac-body {
+    display: flex;
+    min-height: calc(100vh - 160px);
+}
+
+
+/* ============================================================
+   macOS 毛玻璃侧边栏 (Sidebar)
+   ============================================================ */
+.mac-sidebar {
+    width: 210px;
+    min-width: 210px;
+    padding: 12px 8px 16px;
+    background: rgba(0, 0, 0, 0.03);
+    border-right: 1px solid var(--border-glass);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+[data-theme="dark"] .mac-sidebar {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.mac-sidebar-section {
+    margin-bottom: 8px;
+}
+
+.mac-sidebar-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 6px 12px 4px;
+    opacity: 0.7;
+}
+
+.mac-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.mac-sidebar-item i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+}
+
+.mac-sidebar-item:hover {
+    background: var(--card-icon-bg);
+    color: var(--text-primary);
+    transform: translateX(2px);
+}
+
+.mac-sidebar-item:hover i {
+    transform: scale(1.1);
+}
+
+.mac-sidebar-item.active {
+    background: var(--accent) !important;
+    color: #fff !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.mac-sidebar-item.active i {
+    color: #fff !important;
+    transform: scale(1.05);
+}
+
+
+/* ============================================================
+   macOS 主内容区 (Main Content Area)
+   ============================================================ */
+.mac-main {
+    flex: 1;
+    min-width: 0;
+    padding: 20px 24px 28px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+
+/* ============================================================
+   macOS 搜索栏组件
+   ============================================================ */
+.mac-search-bar {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+}
+
+.mac-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 14px 0 40px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-sm);
+}
+
+.mac-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.mac-search-input:focus {
+    border-color: var(--accent);
+    box-shadow:
+        0 0 0 3px var(--accent-glow),
+        var(--shadow-md);
+    background: var(--bg-primary);
+}
+
+.mac-search-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+    transition: color 0.25s ease;
+}
+
+.mac-search-input:focus + .mac-search-icon,
+.mac-search-input:focus ~ .mac-search-icon {
+    color: var(--accent);
+}
+
+
+/* ============================================================
+   macOS Tab 导航 (Pill Tabs)
+   ============================================================ */
+.mac-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--input-bg);
+    border-radius: 10px;
+    border: 1px solid var(--input-border);
+    width: fit-content;
+}
+
+.mac-tab {
+    padding: 6px 16px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mac-tab:hover {
+    color: var(--text-primary);
+    background: rgba(128, 128, 128, 0.08);
+}
+
+.mac-tab.active {
+    background: var(--bg-primary);
+    color: var(--accent);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.mac-tab i {
+    font-size: 0.88rem;
+}
+
+
+/* ============================================================
+   macOS 卡片面板 (Panel Card)
+   ============================================================ */
+.mac-panel {
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+
+.mac-panel:hover {
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.mac-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-glass);
+    gap: 12px;
+}
+
+.mac-panel-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mac-panel-title i {
+    color: var(--accent);
+    font-size: 1rem;
+}
+
+.mac-panel-body {
+    padding: 16px 18px;
+}
+
+
+/* ============================================================
+   macOS 进度条 (Progress Bar)
+   ============================================================ */
+.mac-progress-track {
+    height: 6px;
+    background: var(--input-bg);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mac-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent-gradient);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.mac-progress-fill.animated {
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.15) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 1rem 1rem;
+    animation: macProgressStripe 1s linear infinite;
+}
+
+@keyframes macProgressStripe {
+    from { background-position: 1rem 0; }
+    to   { background-position: 0 0; }
+}
+
+.mac-progress-fill.completed {
+    background: linear-gradient(135deg, #28C840, #34D399);
+}
+
+.mac-progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+}
+
+
+/* ============================================================
+   macOS 任务卡片 (Task Card — Download Manager)
+   ============================================================ */
+.mac-task-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    padding: 16px 18px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.mac-task-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-gradient);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.mac-task-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    transform: translateY(-2px);
+}
+
+.mac-task-card:hover::before { opacity: 1; }
+
+.mac-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.mac-task-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mac-task-id-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--card-icon-bg);
+    color: var(--accent);
+    border: 1px solid var(--border-glass);
+    letter-spacing: -0.02em;
+}
+
+.mac-task-title {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mac-task-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.mac-task-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.mac-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid var(--border-glass);
+    background: var(--bg-glass);
+    backdrop-filter: blur(8px);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.mac-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--card-icon-bg);
+    transform: translateY(-1px);
+}
+
+.mac-action-btn.btn-danger-hover:hover {
+    border-color: #EF4444;
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.mac-action-btn.btn-success-hover:hover {
+    border-color: #34D399;
+    color: #34D399;
+    background: rgba(52, 211, 153, 0.06);
+}
+
+
+/* ============================================================
+   macOS 搜索结果卡片 (Finder-style Grid Cards)
+   ============================================================ */
+.mac-result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.mac-result-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 14px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    position: relative;
+    overflow: hidden;
+}
+
+.mac-result-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: radial-gradient(circle at 50% 0%, var(--card-icon-bg), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.mac-result-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    transform: translateY(-3px) scale(1.01);
+}
+
+.mac-result-card:hover::after { opacity: 1; }
+
+.mac-result-cover {
+    width: 100%;
+    aspect-ratio: 3/4;
+    border-radius: 8px;
+    background: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--border-glass);
+}
+
+.mac-result-cover i {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    opacity: 0.35;
+}
+
+.mac-result-name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+.mac-result-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    position: relative;
+    z-index: 1;
+}
+
+.mac-result-id {
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: 'SF Mono', monospace;
+    color: var(--accent);
+    background: var(--card-icon-bg);
+    padding: 1px 7px;
+    border-radius: 4px;
+}
+
+.mac-result-actions-row {
+    display: flex;
+    gap: 4px;
+}
+
+
+/* ============================================================
+   macOS 文件浏览器 (Finder-style)
+   ============================================================ */
+.mac-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    padding: 8px 14px;
+    background: var(--input-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-glass);
+    flex-wrap: wrap;
+}
+
+.mac-breadcrumb-item {
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 3px 8px;
+    border-radius: 5px;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mac-breadcrumb-item:hover {
+    background: var(--card-icon-bg);
+    color: var(--accent);
+}
+
+.mac-breadcrumb-sep {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.mac-breadcrumb-active {
+    color: var(--text-primary);
+    font-weight: 600;
+    padding: 3px 8px;
+}
+
+.mac-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.mac-file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--bg-glass);
+    border: 1px solid transparent;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.mac-file-row:hover {
+    background: var(--card-icon-bg);
+    border-color: var(--border-glass);
+    transform: translateX(3px);
+}
+
+.mac-file-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    background: var(--card-icon-bg);
+}
+
+.mac-file-icon.folder { color: #F59E0B; }
+.mac-file-icon.image { color: var(--accent); }
+.mac-file-icon.pdf { color: #EF4444; }
+.mac-file-icon.zip { color: #F59E0B; }
+.mac-file-icon.default { color: var(--text-muted); }
+
+.mac-file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mac-file-name {
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mac-file-meta {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.mac-file-size {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* ============================================================
+   macOS 书签管理器 (Safari Bookmarks Style)
+   ============================================================ */
+.mac-bookmark-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.mac-bookmark-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: all 0.22s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+}
+
+.mac-bookmark-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm), var(--shadow-glow);
+    transform: translateY(-1px);
+}
+
+.mac-bookmark-check {
+    flex-shrink: 0;
+}
+
+.mac-bookmark-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.mac-bookmark-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.mac-bookmark-title {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mac-bookmark-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.mac-tag-chip {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    background: var(--card-icon-bg);
+    color: var(--accent-light);
+    border: 1px solid var(--border-glass);
+}
+
+.mac-bookmark-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+
+/* ============================================================
+   macOS 标签筛选条 (Tag Filter Bar)
+   ============================================================ */
+.mac-tag-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--input-bg);
+    border-radius: 10px;
+    border: 1px solid var(--border-glass);
+}
+
+.mac-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    background: var(--bg-glass);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-glass);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.mac-tag-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.mac-tag-pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+
+/* ============================================================
+   macOS 统计卡片 (Stat Card)
+   ============================================================ */
+.mac-stat-card {
+    text-align: center;
+    padding: 16px 12px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.mac-stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+}
+
+.mac-stat-label {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+
+/* ============================================================
+   macOS 空状态 (Empty State)
+   ============================================================ */
+.mac-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.mac-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    opacity: 0.35;
+    display: block;
+}
+
+.mac-empty-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.mac-empty-hint {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+
+/* ============================================================
+   macOS 表单控件增强
+   ============================================================ */
+.mac-form-group {
+    margin-bottom: 12px;
+}
+
+.mac-form-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    letter-spacing: 0.01em;
+}
+
+.mac-select {
+    height: 34px;
+    padding: 0 30px 0 10px;
+    font-size: 0.83rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 8px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mac-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+    outline: none;
+}
+
+.mac-input {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    background: var(--input-bg);
+    border: 1.5px solid var(--input-border);
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.mac-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.mac-input::placeholder { color: var(--text-muted); }
+
+
+/* ============================================================
+   macOS 按钮 (Button System)
+   ============================================================ */
+.mac-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 18px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 8px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.mac-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.mac-btn:hover::before { opacity: 1; }
+
+.mac-btn:active { transform: scale(0.97); }
+
+.mac-btn-primary {
+    background: var(--accent-gradient);
+    color: #fff;
+    box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.mac-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.mac-btn-secondary {
+    background: var(--bg-glass);
+    color: var(--text-secondary);
+    border-color: var(--border-glass);
+}
+
+.mac-btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--card-icon-bg);
+}
+
+.mac-btn-success {
+    background: linear-gradient(135deg, #10B981, #34D399);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+}
+
+.mac-btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+
+.mac-btn-danger {
+    background: linear-gradient(135deg, #EF4444, #F87171);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.25);
+}
+
+.mac-btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.mac-btn-sm {
+    padding: 4px 12px;
+    font-size: 0.77rem;
+    border-radius: 6px;
+}
+
+.mac-btn-lg {
+    padding: 10px 24px;
+    font-size: 0.92rem;
+    border-radius: 10px;
+}
+
+
+/* ============================================================
+   macOS 分页 (Pagination)
+   ============================================================ */
+.mac-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    margin-top: 20px;
+}
+
+.mac-page-btn {
+    min-width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0 10px;
+    text-decoration: none;
+}
+
+.mac-page-btn:hover:not(.active):not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--card-icon-bg);
+}
+
+.mac-page-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 700;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.mac-page-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+
+/* ============================================================
+   macOS 模态框 (Modal Dialog)
+   ============================================================ */
+.mac-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: macModalFadeIn 0.2s ease;
+}
+
+@keyframes macModalFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.mac-modal-dialog {
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    width: 92%;
+    max-width: 440px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: macModalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+@keyframes macModalSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mac-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.mac-modal-header span {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.mac-modal-body {
+    padding: 20px;
+}
+
+.mac-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-glass);
+}
+
+
+/* ============================================================
+   macOS 响应式适配
+   ============================================================ */
+
+/* 平板：侧边栏收窄 */
+@media (max-width: 1024px) {
+    .mac-sidebar {
+        width: 170px;
+        min-width: 170px;
+    }
+
+    .mac-main {
+        padding: 16px 18px 24px;
+    }
+
+    .mac-result-grid {
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    }
+
+    .mac-bookmark-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 手机端：侧边栏变为顶部导航 */
+@media (max-width: 768px) {
+    .main-content {
+        padding-top: calc(48px + 1rem);
+    }
+
+    .mac-window {
+        margin: 0 0 1rem;
+        border-radius: 12px;
+    }
+
+    .mac-body {
+        flex-direction: column;
+    }
+
+    .mac-sidebar {
+        width: 100%;
+        min-width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 8px 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-glass);
+        gap: 4px;
+    }
+
+    .mac-sidebar-section {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .mac-sidebar-label {
+        display: none;
+    }
+
+    .mac-sidebar-item {
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    .mac-sidebar-item:hover {
+        transform: translateX(0);
+    }
+
+    .mac-sidebar-item i {
+        font-size: 0.9rem;
+    }
+
+    .mac-titlebar {
+        padding: 10px 14px 8px;
+    }
+
+    .mac-titlebar-text {
+        font-size: 0.76rem;
+    }
+
+    .mac-main {
+        padding: 14px 14px 20px;
+    }
+
+    .mac-result-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+    }
+
+    .mac-search-bar {
+        max-width: 100%;
+    }
+
+    .mac-tabs {
+        width: 100%;
+        justify-content: flex-start;
+        overflow-x: auto;
+    }
+
+    .mac-tab {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+
+    .mac-task-card {
+        padding: 12px 14px;
+    }
+
+    .mac-task-header {
+        flex-direction: column;
+    }
+
+    .mac-task-actions {
+        flex-wrap: wrap;
+    }
+
+    .mac-breadcrumb {
+        font-size: 0.76rem;
+        padding: 6px 10px;
+    }
+
+    .mac-file-row {
+        padding: 8px 10px;
+    }
+
+    .mac-bookmark-card {
+        flex-wrap: wrap;
+    }
+
+    .mac-bookmark-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid var(--border-glass);
+    }
+
+    /* 隐藏桌面端多余元素 */
+    .page-header-desc { display: none !important; }
+}
+
+/* 超小屏 */
+@media (max-width: 480px) {
+    .mac-result-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .mac-stat-value {
+        font-size: 1.4rem;
+    }
+
+    .mac-btn-lg {
+        width: 100%;
+    }
+}

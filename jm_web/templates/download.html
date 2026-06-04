@@ -3,98 +3,152 @@
 {% block page_class %}download{% endblock %}
 {% block content %}
 
-<div x-data="downloadManager()" x-init="init()">
+<!-- ============================================================
+     macOS 窗口壳：下载管理
+     ============================================================ -->
+<div class="mac-window">
 
-    <!-- 页面标题 -->
-    <div class="page-header">
-        <div class="page-header-accent" style="background:linear-gradient(180deg,var(--success),var(--accent))"></div>
-        <h2><i class="bi bi-download me-1" style="color:var(--success)"></i>下载管理</h2>
-        <span class="page-header-desc">创建任务 & 追踪进度</span>
-    </div>
-
-    <!-- 新建任务 -->
-    <div class="jm-card" style="margin-bottom:1.25rem" x-data="{ showAdvanced: false }">
-        <div class="jm-card-header">
-            <span class="jm-card-title"><i class="bi bi-plus-circle" style="color:var(--success)"></i> 新建下载任务</span>
-            <button class="btn btn-outline-secondary btn-sm" @click="showAdvanced = !showAdvanced">
-                <i class="bi bi-sliders me-1"></i><span x-text="showAdvanced ? '收起' : '高级选项'"></span>
-            </button>
+    <!-- 窗口标题栏 -->
+    <div class="mac-titlebar">
+        <div class="mac-traffic-lights">
+            <button class="mac-light-btn mac-light-close" title="关闭" onclick="window.location.href='/'"></button>
+            <button class="mac-light-btn mac-light-minimize" title="最小化"></button>
+            <button class="mac-light-btn mac-light-maximize" title="最大化"></button>
         </div>
-        <div class="jm-card-body">
-            <form @submit.prevent="submitDownload()">
-                <div class="row g-2 align-items-end mb-0">
-                    <div class="col-md-4 col-lg-5">
-                        <label class="form-label">本子ID</label>
-                        <input type="text" class="form-control"
-                               placeholder="输入 ID 或粘贴含 ID 的文本" x-model="albumId" required
-                               @paste="handlePaste($event)">
-                        <small style="display:block;margin-top:3px;font-size:.75rem;color:var(--fg-dim)">支持自动提取文本中的数字 ID</small>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label">导出格式</label>
-                        <div class="d-flex gap-2 pt-1">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" value="pdf" x-model="exportFormats">
-                                <label class="form-check-label text-sm">PDF</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" value="zip" x-model="exportFormats">
-                                <label class="form-check-label text-sm">ZIP</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" value="long_img" x-model="exportFormats">
-                                <label class="form-check-label text-sm">长图</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label">图片格式</label>
-                        <select class="form-select form-select-sm" style="width:95px" x-model="imageSuffix">
-                            <option value="">默认</option>
-                            <option value=".jpg">JPG</option>
-                            <option value=".png">PNG</option>
-                            <option value=".webp">WebP</option>
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label">并发数</label>
-                        <input type="number" class="form-control form-control-sm" style="width:75px" x-model="threadCount" placeholder="默认" min="1" max="50">
-                    </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-success btn-sm" :disabled="submitting" style="min-width:110px;padding:.45rem 1rem;">
-                            <span x-show="!submitting"><i class="bi bi-download me-1"></i>开始下载</span>
-                            <span x-show="submitting"><span class="spinner-border spinner-border-sm me-1"></span>提交中</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 高级选项 -->
-                <div x-show="showAdvanced" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-subtle)">
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label">登录用户名（敏感本子需要）</label>
-                            <input type="text" class="form-control form-control-sm" placeholder="禁漫账号" x-model="loginUsername">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">登录密码</label>
-                            <input type="password" class="form-control form-control-sm" placeholder="禁漫密码" x-model="loginPassword">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">代理地址</label>
-                            <input type="text" class="form-control form-control-sm" placeholder="如 127.0.0.1:7890" x-model="proxy">
-                        </div>
-                    </div>
-                </div>
-            </form>
+        <div class="mac-titlebar-text">
+            <i class="bi bi-download mac-icon"></i>下载管理
         </div>
     </div>
 
-    <!-- 任务列表 (HTMX 轮询) -->
-    <div id="task-list-container" hx-get="/download/partial/task-list" hx-trigger="every 2s" hx-swap="innerHTML">
-        {% include "partials/task_list.html" %}
-    </div>
+    <div class="mac-body">
 
+        <!-- 毛玻璃侧边栏 -->
+        <aside class="mac-sidebar">
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">导航</div>
+                <a href="{{ url_for('search.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-compass"></i>搜索浏览
+                </a>
+                <a href="{{ url_for('download.index') }}" class="mac-sidebar-item active">
+                    <i class="bi bi-download"></i>下载管理
+                </a>
+                <a href="{{ url_for('files.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-folder2-open"></i>文件浏览
+                </a>
+                <a href="{{ url_for('favorites.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-heart"></i>书签管理
+                </a>
+            </div>
+            <div class="mac-sidebar-section">
+                <div class="mac-sidebar-label">快捷</div>
+                <a href="/" class="mac-sidebar-item">
+                    <i class="bi bi-house-door"></i>返回首页
+                </a>
+                <a href="{{ url_for('config.index') }}" class="mac-sidebar-item">
+                    <i class="bi bi-gear"></i>系统配置
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="mac-main" x-data="downloadManager()" x-init="init()">
+
+            <!-- 新建任务面板 -->
+            <div class="mac-panel" x-data="{ showAdvanced: false }">
+                <div class="mac-panel-header">
+                    <span class="mac-panel-title">
+                        <i class="bi bi-plus-circle-fill"></i>新建下载任务
+                    </span>
+                    <button class="mac-btn mac-btn-secondary mac-btn-sm"
+                            @click="showAdvanced = !showAdvanced">
+                        <i class="bi bi-sliders"></i>
+                        <span x-text="showAdvanced ? '收起' : '高级选项'"></span>
+                    </button>
+                </div>
+                <div class="mac-panel-body">
+                    <form @submit.prevent="submitDownload()">
+                        <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+                            <div class="mac-form-group" style="margin-bottom:0;min-width:200px;flex:1;">
+                                <label class="mac-form-label">本子ID</label>
+                                <input type="text" class="mac-input"
+                                       placeholder="输入 ID 或粘贴含 ID 的文本" x-model="albumId" required
+                                       @paste="handlePaste($event)">
+                                <small style="display:block;margin-top:3px;font-size:.72rem;color:var(--text-muted)">支持自动提取文本中的数字 ID</small>
+                            </div>
+
+                            <div class="mac-form-group" style="margin-bottom:0">
+                                <label class="mac-form-label">导出格式</label>
+                                <div style="display:flex;gap:6px">
+                                    <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                        <input type="checkbox" value="pdf" x-model="exportFormats" style="accent-color:var(--accent)"> PDF
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                        <input type="checkbox" value="zip" x-model="exportFormats" style="accent-color:var(--accent)"> ZIP
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:3px;font-size:.78rem;color:var(--text-secondary);cursor:pointer">
+                                        <input type="checkbox" value="long_img" x-model="exportFormats" style="accent-color:var(--accent)"> 长图
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mac-form-group" style="margin-bottom:0">
+                                <label class="mac-form-label">图片格式</label>
+                                <select class="mac-select" style="width:95px" x-model="imageSuffix">
+                                    <option value="">默认</option>
+                                    <option value=".jpg">JPG</option>
+                                    <option value=".png">PNG</option>
+                                    <option value=".webp">WebP</option>
+                                </select>
+                            </div>
+
+                            <div class="mac-form-group" style="margin-bottom:0">
+                                <label class="mac-form-label">并发数</label>
+                                <input type="number" class="mac-input" style="width:75px" x-model="threadCount"
+                                       placeholder="默认" min="1" max="50">
+                            </div>
+
+                            <button type="submit" class="mac-btn mac-btn-success"
+                                    :disabled="submitting" style="min-width:120px;">
+                                <span x-show="!submitting"><i class="bi bi-download"></i>开始下载</span>
+                                <span x-show="submitting">
+                                    <span class="spinner-border spinner-border-sm" style="width:15px;height:15px;border-width:2px;"></span> 提交中
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- 高级选项 -->
+                        <div x-show="showAdvanced"
+                             style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-glass)">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+                                <div class="mac-form-group">
+                                    <label class="mac-form-label">登录用户名</label>
+                                    <input type="text" class="mac-input mac-input-sm" placeholder="禁漫账号" x-model="loginUsername">
+                                </div>
+                                <div class="mac-form-group">
+                                    <label class="mac-form-label">登录密码</label>
+                                    <input type="password" class="mac-input mac-input-sm" placeholder="禁漫密码" x-model="loginPassword">
+                                </div>
+                                <div class="mac-form-group">
+                                    <label class="mac-form-label">代理地址</label>
+                                    <input type="text" class="mac-input mac-input-sm" placeholder="如 127.0.0.1:7890" x-model="proxy">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 任务列表 (HTMX 轮询) -->
+            <div id="task-list-container"
+                 hx-get="/download/partial/task-list" hx-trigger="every 2s" hx-swap="innerHTML"
+                 style="flex:1">
+                {% include "partials/task_list.html" %}
+            </div>
+
+        </main>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -112,9 +166,9 @@ function downloadManager(){
             try{
                 var r=await fetch('/download/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id,image_suffix:this.imageSuffix||null,thread_count:this.threadCount||null,export_formats:this.exportFormats.length>0?this.exportFormats:null,login_username:this.loginUsername||null,login_password:this.loginPassword||null,proxy:this.proxy||null})});
                 var d=await r.json();
-                if(d.task_id){showToast('success','\u4efb\u52a1\u5df2\u521b\u5efa: '+d.task_id);window.TaskManager.startTracking(d.task_id,id);this.albumId='';this.exportFormats=[];}
-                else showToast('error',d.error||'\u521b\u5efa\u5931\u8d25');
-            }catch(e){showToast('error','\u8bf7\u6c82\u5931\u8d25: '+e.message);}
+                if(d.task_id){showToast('success','任务已创建: '+d.task_id);window.TaskManager.startTracking(d.task_id,id);this.albumId='';this.exportFormats=[];}
+                else showToast('error',d.error||'创建失败');
+            }catch(e){showToast('error','请求失败: '+e.message);}
             finally{this.submitting=false;}
         }
     };

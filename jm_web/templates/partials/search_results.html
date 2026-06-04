@@ -1,68 +1,63 @@
-<!-- 搜索结果 (HTMX partial) -->
+<!-- 搜索结果 (HTMX partial) — macOS Finder 风格网格卡片 -->
 {% if error %}
-<div class="alert alert-danger">{{ error }}</div>
+<div class="alert alert-danger" style="border-radius:10px;font-size:.86rem">{{ error }}</div>
 {% endif %}
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
-    <span style="font-size:.84rem;color:var(--fg-muted)">
-        找到 <strong style="color:var(--fg)">{{ total }}</strong> 个结果
+<!-- 结果统计 -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <span style="font-size:.84rem;color:var(--text-secondary)">
+        找到 <strong style="color:var(--accent);font-size:.9rem">{{ total }}</strong> 个结果
         {% if q %}— 关键字 "<strong style="color:var(--accent)">{{ q }}</strong>"{% endif %}
     </span>
 </div>
 
 {% if items %}
-<div style="display:flex;flex-direction:column;gap:6px">
+<!-- Finder 风格网格 -->
+<div class="mac-result-grid">
 {% for item in items %}
-<div class="result-item">
-    <div class="result-left">
-        <span class="badge-id">JM{{ item.id }}</span>
-        <span class="result-title" title="{{ item.title }}">{{ item.title }}</span>
+<a href="{{ url_for('search.album_detail_page', album_id=item.id) }}"
+   class="mac-result-card" title="{{ item.title }}">
+    <!-- 封面占位（Finder 图标预览感） -->
+    <div class="mac-result-cover">
+        <i class="bi bi-image"></i>
     </div>
-    <div class="result-actions">
-        <a href="{{ url_for('search.album_detail_page', album_id=item.id) }}"
-           class="btn btn-outline-info btn-sm" title="详情"><i class="bi bi-info-circle"></i></a>
-        <button class="btn btn-outline-success btn-sm"
-                onclick="quickDownload('{{ item.id }}','{{ item.title|e }}')"
-                title="下载"><i class="bi bi-download"></i></button>
+    <div class="mac-result-name">{{ item.title }}</div>
+    <div class="mac-result-meta">
+        <span class="mac-result-id">JM{{ item.id }}</span>
+        <div class="mac-result-actions-row">
+            <button class="mac-action-btn btn-success-hover mac-btn-sm"
+                    onclick="event.stopPropagation();quickDownload('{{ item.id }}','{{ item.title|e }}')"
+                    title="下载"><i class="bi bi-download"></i></button>
+        </div>
     </div>
-</div>
+</a>
 {% endfor %}
 </div>
 
-<!-- 分页 -->
+<!-- macOS 分页 -->
 {% if total_pages > 1 %}
-<nav style="margin-top:1rem">
-    <ul class="pagination pagination-sm justify-content-center">
-        <li class="page-item {{ 'disabled' if page <= 1 }}">
-            <button class="page-link"
-                    hx-get="{{ url_for('search.search_results', q=q, page=page-1) }}"
-                    hx-target="#search-results-area" hx-swap="innerHTML"
-                    {{ 'disabled' if page <= 1 }}>‹</button>
-        </li>
-        {% set sp = [1, page-2]|sort|last %}
-        {% set ep = [total_pages+1, page+3]|sort|first %}
-        {% for p in range(sp, ep) %}
-        <li class="page-item {{ 'active' if p == page }}">
-            <button class="page-link"
-                    hx-get="{{ url_for('search.search_results', q=q, page=p) }}"
-                    hx-target="#search-results-area" hx-swap="innerHTML">{{ p }}</button>
-        </li>
-        {% endfor %}
-        <li class="page-item {{ 'disabled' if page >= total_pages }}">
-            <button class="page-link"
-                    hx-get="{{ url_for('search.search_results', q=q, page=page+1) }}"
-                    hx-target="#search-results-area" hx-swap="innerHTML"
-                    {{ 'disabled' if page >= total_pages }}>›</button>
-        </li>
-    </ul>
+<nav class="mac-pagination">
+    <button class="mac-page-btn" {{ 'disabled' if page <= 1 }}
+            hx-get="{{ url_for('search.search_results', q=q, page=page-1) }}"
+            hx-target="#search-results-area" hx-swap="innerHTML">&#8249;</button>
+    {% set sp = [1, page-2]|sort|last %}
+    {% set ep = [total_pages+1, page+3]|sort|first %}
+    {% for p in range(sp, ep) %}
+    <button class="mac-page-btn {{ 'active' if p == page }}"
+            hx-get="{{ url_for('search.search_results', q=q, page=p) }}"
+            hx-target="#search-results-area" hx-swap="innerHTML">{{ p }}</button>
+    {% endfor %}
+    <button class="mac-page-btn" {{ 'disabled' if page >= total_pages }}
+            hx-get="{{ url_for('search.search_results', q=q, page=page+1) }}"
+            hx-target="#search-results-area" hx-swap="innerHTML">&#8250;</button>
 </nav>
 {% endif %}
 
 {% else %}
-<div class="empty-state">
-    <i class="bi bi-search empty-icon"></i>
-    <p class="empty-text">没有找到结果</p>
-    <p class="empty-hint">{% if q %}试试其他关键字，或切换到「排行榜」浏览热门内容{% else %}输入关键字开始搜索{% endif %}</p>
+<div class="mac-empty-state">
+    <i class="bi bi-search mac-empty-icon"></i>
+    <p class="mac-empty-text">没有找到结果</p>
+    <p class="mac-empty-hint">{% if q %}试试其他关键字，或切换到「排行榜」浏览热门内容{% else %}输入关键字开始搜索{% endif %}</p>
 </div>
 {% endif %}
 

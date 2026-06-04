@@ -104,9 +104,17 @@ def _ensure_default_config() -> str:
         default_option.dir_rule.base_dir = download_dir
         # 关闭代理避免读到系统失效的代理地址
         default_option.client.postman.meta_data['proxies'] = None
-        # 降低默认并发，提高稳定性
-        default_option.download_config.threading.image = 8
-        default_option.download_config.threading.photo = 4
+        # 降低默认并发，提高稳定性（兼容不同版本）
+        try:
+            default_option.download_config.threading.image = 8
+            default_option.download_config.threading.photo = 4
+        except AttributeError:
+            # 旧版本 jmcomic 使用字典方式
+            try:
+                default_option.download['threading']['image'] = 8
+                default_option.download['threading']['photo'] = 4
+            except Exception:
+                pass
         default_option.to_file(config_path)
 
     # 每次启动都修复已知问题：代理 + 线程数

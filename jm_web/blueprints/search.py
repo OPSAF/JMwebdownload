@@ -127,6 +127,39 @@ def rankings():
 
 
 # ============================================================
+# 热门排行榜 API
+# ============================================================
+
+@bp.route("/api/hot")
+def api_hot_list():
+    """获取热门排行榜（用于首页展示）."""
+    limit = request.args.get("limit", 8, type=int)
+    
+    try:
+        client = get_client()
+        magic = get_magic_constants()
+        result = client.categories_filter(
+            page=1,
+            time=magic["time"]["WEEK"],
+            category=magic["categories"]["CATEGORY_ALL"],
+            order_by=magic["order_by"]["VIEW"],
+        )
+        
+        items = []
+        count = 0
+        for aid, atitle in result.iter_id_title():
+            if count >= limit:
+                break
+            items.append({"id": aid, "title": atitle})
+            count += 1
+        
+        return jsonify({"items": items})
+    except Exception as e:
+        current_app.logger.error(f"获取热门列表失败: {e}")
+        return jsonify({"items": []})
+
+
+# ============================================================
 # JSON API — 本子详情
 # ============================================================
 

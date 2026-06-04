@@ -346,7 +346,7 @@ function bookmarksApp(){
 
         async batchRemove(){
             if(!this.selectedIds.length||!confirm('确定删除 '+this.selectedIds.length+' 个书签？'))return;
-            for(var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i])});
+            for(var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i]})});
             showToast('success','批量删除完成');this.selectedIds=[];await this.loadData();
         },
 

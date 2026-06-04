@@ -62,7 +62,7 @@
                                     .catch(e => { error = e.error || '查询失败'; loading = false; });
                             ">
                         <span class="btn-pulse-ring"></span>
-                        <i x-show="!loading">bi bi-lightning-charge-fill" :class="loading ? '' : 'bi bi-lightning-charge-fill'" x-transition></i>
+                        <i x-show="!loading" class="bi bi-lightning-charge-fill" x-transition></i>
                         <i x-show="loading" class="spinner-border spinner-border-sm" style="width:18px;height:18px;border-width:2px;"></i>
                         <span x-text="loading ? '查询中…' : '立即查询'"></span>
                     </button>

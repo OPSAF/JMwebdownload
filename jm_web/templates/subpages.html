@@ -147,6 +147,14 @@
                      x-data="downloadManager()" x-init="$watch('activePage', (v) => { if(v==='download') init(); })"
                      style="display:none; flex-direction: column; gap: 16px; flex: 1; min-height: 0;">
 
+                {% if is_web_mode %}
+                <!-- Web 模式提示条 -->
+                <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:.82rem;color:#F59E0B">
+                    <i class="bi bi-cloud" style="font-size:1.05rem"></i>
+                    <span><strong>Web 模式</strong> — 文件将下载到服务器临时存储，完成后可打包为 ZIP 下载到本地</span>
+                </div>
+                {% endif %}
+
                 <!-- 新建任务面板 -->
                 <div class="mac-panel" x-data="{ showAdvanced: false }">
                     <div class="mac-panel-header">

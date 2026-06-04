@@ -2,6 +2,7 @@
 
 import os
 import re
+import tempfile
 import threading
 from pathlib import Path
 
@@ -18,17 +19,17 @@ from jmcomic import (
 
 
 def extract_album_id(text: str) -> str | None:
-    """从文本中提取本子 ID。
-    
+    """从文本中提取本子 ID.
+
     使用 jmcomic 包的正则表达式提取所有连续数字并连接。
     例如: "12级加里奥打出6417" -> "126417"
-    
+
     Returns:
         提取到的 ID 字符串，如果找不到则返回 None
     """
     if not text:
         return None
-    
+
     # 使用正则提取所有连续数字
     numbers = re.findall(r'\d+', text)
     if numbers:
@@ -55,6 +56,49 @@ if _download_dir_env:
 else:
     DEFAULT_DOWNLOAD_DIR = PROJECT_ROOT / "downloads"
 
+# ============================================================
+# Web 模式检测：无持久化文件系统时自动启用临时目录模式
+# ============================================================
+_WEB_MODE = False
+_WEB_TEMP_DIR = None
+
+
+def is_web_mode() -> bool:
+    """检测当前是否运行在 Web/无持久存储环境（如 Vercel）."""
+    global _WEB_MODE, _WEB_TEMP_DIR
+    if _WEB_TEMP_DIR is not None:
+        return _WEB_MODE
+
+    # 尝试在默认下载目录写入测试文件
+    test_path = DEFAULT_DOWNLOAD_DIR / ".write_test"
+    try:
+        DEFAULT_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        test_path.write_text("test", encoding="utf-8")
+        test_path.unlink()
+        _WEB_MODE = False
+        return False
+    except (OSError, PermissionError):
+        # 写入失败 → 切换到临时目录模式
+        _WEB_MODE = True
+        _WEB_TEMP_DIR = tempfile.mkdtemp(prefix="jmd_web_")
+        print(f"[Web Mode] 默认目录不可写，使用临时目录: {_WEB_TEMP_DIR}")
+        return True
+
+
+def get_download_dir() -> str:
+    """返回下载根目录.
+
+    Web 模式下自动回退到系统临时目录。
+    """
+    if is_web_mode():
+        global _WEB_TEMP_DIR
+        if _WEB_TEMP_DIR and os.path.isdir(_WEB_TEMP_DIR):
+            return _WEB_TEMP_DIR
+        # 临时目录被清理了，重新创建
+        _WEB_TEMP_DIR = tempfile.mkdtemp(prefix="jmd_web_")
+        return _WEB_TEMP_DIR
+    return str(DEFAULT_DOWNLOAD_DIR)
+
 # 线程本地存储，每个线程持有独立的 option/client
 _tls = threading.local()
 
@@ -62,11 +106,6 @@ _tls = threading.local()
 def get_default_config_path() -> str:
     """返回默认配置文件的绝对路径."""
     return str(DEFAULT_CONFIG_PATH)
-
-
-def get_download_dir() -> str:
-    """返回下载根目录."""
-    return str(DEFAULT_DOWNLOAD_DIR)
 
 
 def _ensure_default_config() -> str:

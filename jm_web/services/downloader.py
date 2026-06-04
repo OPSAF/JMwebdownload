@@ -1,9 +1,11 @@
 """下载任务管理器 — 后台线程池 + 目录快照追踪 + 导出."""
 
+import io
 import os
 import threading
 import time
 import uuid
+import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +23,7 @@ from jmcomic import (
     JmcomicException,
 )
 
-from .jm_client import get_option, get_download_dir
+from .jm_client import get_option, get_download_dir, is_web_mode
 
 # ============================================================
 # 数据模型
@@ -44,6 +46,9 @@ class TaskProgress:
     error: str = ""
     export_formats: list = field(default_factory=list)
     download_path: str = ""
+    web_mode: bool = False          # 是否为 Web 模式（无持久存储）
+    zip_filename: str = ""          # Web 模式下生成的 ZIP 文件名
+    _zip_bytes: bytes | None = None # Web 模式下 ZIP 的内存数据（内部用）
     _cancelled: bool = field(default=False, repr=False)
 
 
@@ -114,6 +119,7 @@ def task_to_dict(t: TaskProgress) -> dict:
         "message": t.message, "error": t.error,
         "export_formats": t.export_formats, "download_path": t.download_path,
         "image_percent": ip, "photo_percent": pp,
+        "web_mode": t.web_mode, "zip_filename": t.zip_filename,
     }
 
 
@@ -376,8 +382,32 @@ def download_worker(
             _do_exports(task_id, new_dirs, title, export_formats)
 
         # ==== 完成 ====
+        # Web 模式下：将下载的文件打包到内存 ZIP，供浏览器下载
+        web = is_web_mode()
+        if web and actual_count > 0:
+            _update(task_id, status="exporting", message="打包下载文件...")
+            try:
+                zip_buf = io.BytesIO()
+                safe_title = "".join(c for c in title if c not in r'\/:*?"<>|') or album_id
+                zip_name = f"{safe_title}.zip"
+                with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for d in sorted(new_dirs, key=lambda x: x.name):
+                        for root, _, files in os.walk(d):
+                            for f in files:
+                                fp = Path(root) / f
+                                arcname = str(fp.relative_to(base))
+                                zf.write(fp, arcname=arcname)
+                zip_bytes = zip_buf.getvalue()
+                t = get_task(task_id)
+                if t:
+                    t.web_mode = True
+                    t.zip_filename = zip_name
+                    t._zip_bytes = zip_bytes
+                _update(task_id, message=f"下载完成 [{title}]，{actual_count}张图（点击下方按钮下载）")
+            except Exception as e_zip:
+                _update(task_id, message=f"下载完成但打包失败: {e_zip}，请重试")
+
         _update(task_id, status="completed",
-                message=f"下载完成 [{title}]，{actual_count}张图",
                 finished_at=datetime.now().isoformat())
 
     except MissingAlbumPhotoException as e:
@@ -400,13 +430,26 @@ def download_worker(
 def start_download(album_id: str, **kw) -> str:
     task_id = str(uuid.uuid4())[:8]
     t = TaskProgress(task_id=task_id, album_id=album_id,
-                     export_formats=kw.get("export_formats") or [])
+                     export_formats=kw.get("export_formats") or [],
+                     web_mode=is_web_mode())
     with _tasks_lock:
         _tasks[task_id] = t
     th = threading.Thread(target=download_worker, args=(task_id, album_id),
                           kwargs=kw, daemon=True)
     th.start()
     return task_id
+
+
+def get_task_zip(task_id: str) -> tuple[bytes | None, str]:
+    """获取任务在 Web 模式下打包的 ZIP 数据.
+
+    Returns:
+        (zip_bytes, filename) 或 (None, '') 如果没有可用的 ZIP 数据
+    """
+    t = get_task(task_id)
+    if t and t._zip_bytes and t.web_mode:
+        return t._zip_bytes, t.zip_filename
+    return None, ""
 
 
 def cancel_task(task_id: str) -> bool:

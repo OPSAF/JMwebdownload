@@ -61,7 +61,15 @@
             <i class="bi bi-trash"></i>清除
         </button>
         {% endif %}
-        {% if task.status == 'completed' %}
+        {% if task.status == 'completed' and task.web_mode and task.zip_filename %}
+        <!-- Web 模式：下载内存 ZIP 文件 -->
+        <a href="/download/file/{{ task.task_id }}"
+           class="mac-action-btn mac-btn-primary" style="background:var(--accent);color:#fff;border-color:var(--accent)"
+           title="下载 ZIP 文件">
+            <i class="bi bi-download"></i>下载文件
+        </a>
+        {% elif task.status == 'completed' %}
+        <!-- 本地模式：查看文件目录 -->
         <a href="{{ url_for('files.index') }}" class="mac-action-btn btn-success-hover" title="查看文件">
             <i class="bi bi-folder2-open"></i>查看
         </a>

@@ -63,9 +63,10 @@ def create_app() -> Flask:
     # 注入模板全局变量
     @app.context_processor
     def inject_globals():
-        from jm_web.services.jm_client import get_download_dir
+        from jm_web.services.jm_client import get_download_dir, is_web_mode
         return {
             "get_download_dir": get_download_dir,
+            "is_web_mode": is_web_mode(),
         }
 
     return app

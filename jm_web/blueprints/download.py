@@ -1,9 +1,10 @@
 """下载 blueprint — 提交下载任务 + SSE 实时进度推送."""
 
+import io
 import json
 import time
 
-from flask import Blueprint, render_template, request, jsonify, Response, current_app, redirect
+from flask import Blueprint, render_template, request, jsonify, Response, current_app, redirect, send_file
 
 from ..services.jm_client import extract_album_id
 from ..services.downloader import (
@@ -15,6 +16,7 @@ from ..services.downloader import (
     subscribe_progress,
     unsubscribe_progress,
     task_to_dict,
+    get_task_zip,
 )
 
 bp = Blueprint("download", __name__, url_prefix="/download")
@@ -203,3 +205,24 @@ def task_card_partial(task_id: str):
     if task is None:
         return '<div class="alert alert-warning">任务不存在或已删除</div>'
     return render_template("partials/task_card.html", task=task_to_dict(task))
+
+
+@bp.route("/file/<task_id>")
+def download_file(task_id: str):
+    """Web 模式：下载已打包的 ZIP 文件.
+
+    在无持久文件系统的环境（如 Vercel）中，
+    下载完成后 ZIP 数据存储在内存中，通过此端点返回给浏览器。
+    """
+    zip_bytes, filename = get_task_zip(task_id)
+    if zip_bytes is None:
+        return jsonify({"error": "文件不存在或尚未生成（请等待下载完成）"}), 404
+
+    # 用 BytesIO 包装内存数据供 send_file 使用
+    buf = io.BytesIO(zip_bytes)
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=filename or f"jm_{task_id}.zip",
+    )

@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Downloads
+downloads/
+_exports/
+
+# Config
+config.yml
+bookmarks.json
+
+# Trae IDE
+.trae/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

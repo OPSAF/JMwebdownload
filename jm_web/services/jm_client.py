@@ -118,8 +118,11 @@ def _zh_to_digit(text: str) -> int:
         return int(text)
     return _convert_zh_number(text)
 
-# 项目根目录
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# 项目根目录（支持环境变量覆盖）
+# 在服务器部署时，可以通过环境变量指定路径
+_env_root = os.environ.get("JMD_ROOT")
+PROJECT_ROOT = Path(_env_root) if _env_root else Path(__file__).resolve().parent.parent.parent
+
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yml"
 DEFAULT_DOWNLOAD_DIR = PROJECT_ROOT / "downloads"
 
@@ -140,9 +143,11 @@ def get_download_dir() -> str:
 def _ensure_default_config() -> str:
     """确保默认配置文件存在，不存在则创建一个."""
     config_path = get_default_config_path()
+    download_dir = get_download_dir()
+    
     if not os.path.exists(config_path):
         default_option = JmOption.default()
-        default_option.dir_rule.base_dir = get_download_dir()
+        default_option.dir_rule.base_dir = download_dir
         # 关闭代理避免读到系统失效的代理地址
         default_option.client.postman.meta_data['proxies'] = None
         # 降低默认并发，提高稳定性
@@ -158,6 +163,26 @@ def _ensure_default_config() -> str:
     try:
         if option.client.postman.meta_data.get('proxies'):
             option.client.postman.meta_data['proxies'] = None
+            needs_save = True
+    except Exception:
+        pass
+
+    # 检测并修复下载目录路径问题
+    try:
+        current_base_dir = option.dir_rule.base_dir
+        # 检查路径是否存在或不可写
+        base_dir_path = Path(current_base_dir)
+        if not base_dir_path.exists():
+            # 路径不存在，尝试创建
+            try:
+                base_dir_path.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                # 创建失败，使用默认目录
+                option.dir_rule.base_dir = download_dir
+                needs_save = True
+        elif not os.access(str(base_dir_path), os.W_OK):
+            # 路径不可写，使用默认目录
+            option.dir_rule.base_dir = download_dir
             needs_save = True
     except Exception:
         pass

@@ -3,113 +3,109 @@
 {% block page_class %}favorites{% endblock %}
 {% block content %}
 
-<div x-data="bookmarksApp()">
+<div x-data="bookmarksApp()" x-init="init()">
+
+    <!-- 页面标题 -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div style="width:4px;height:28px;border-radius:2px;background:linear-gradient(180deg,#ec4899,#8b5cf6)"></div>
+        <h2 class="mb-0" style="font-size:1.35rem;font-weight:700"><i class="bi bi-bookmark me-1"></i>书签管理</h2>
+        <span class="text-muted text-sm ms-auto">本地收藏 & 批量操作</span>
+    </div>
+
     <div class="row">
         <!-- 左侧：书签列表 -->
         <div class="col-lg-8">
-            <div class="card bg-dark-subtle border-secondary mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-bookmark text-primary"></i> 我的书签</h5>
-                    <div class="btn-group btn-group-sm gap-1">
-                        <button class="btn btn-outline-success" @click="exportJSON()" :disabled="exporting">
-                            <i class="bi bi-download"></i> 导出 JSON
-                        </button>
-                        <button class="btn btn-outline-info" @click="exportCSV()" :disabled="exporting">
-                            <i class="bi bi-file-text"></i> 导出 CSV
-                        </button>
+            <div class="card mb-0">
+                <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span style="font-weight:600;font-size:.92rem"><i class="bi bi-bookmarks me-1"></i>我的书签</span>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-outline-success btn-sm" @click="exportJSON()" :disabled="exporting"><i class="bi bi-download me-1"></i>JSON</button>
+                        <button class="btn btn-outline-info btn-sm" @click="exportCSV()" :disabled="exporting"><i class="bi bi-file-text me-1"></i>CSV</button>
                     </div>
                 </div>
                 <div class="card-body">
+
                     <!-- 标签筛选 -->
-                    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" x-show="tags.length > 0">
-                        <span class="text-secondary text-sm">筛选标签:</span>
-                        <button
-                            class="tag-badge"
-                            :class="{ active: !selectedTag }"
-                            @click="selectedTag = ''">
-                            全部
-                        </button>
+                    <div x-show="tags.length > 0" class="d-flex flex-wrap gap-2 align-items-center mb-3 pb-2" style="border-bottom:1px solid var(--border)">
+                        <span class="text-muted text-xs">标签筛选:</span>
+                        <button class="tag-badge" :class="{ active: !selectedTag }" @click="selectedTag = ''; loadData()">全部</button>
                         <template x-for="tag in tags">
-                            <button
-                                class="tag-badge"
-                                :class="{ active: selectedTag === tag }"
-                                @click="selectedTag = tag"
-                                x-text="tag">
-                            </button>
+                            <button class="tag-badge" :class="{ active: selectedTag === tag }"
+                                    @click="selectedTag = tag; loadData()"
+                                    x-text="tag"></button>
                         </template>
                     </div>
 
-                    <!-- 添加新书签表单 -->
-                    <div class="card bg-dark border-secondary mb-3 p-3">
-                        <div class="row g-2">
-                            <div class="col-md-5">
-                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                    <!-- 添加新书签 -->
+                    <div class="bg-dark-subtle rounded p-3 mb-3" style="border:1px dashed var(--border)">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4 col-lg-5">
+                                <input type="text" class="form-control form-control-sm bg-dark-subtle"
                                        placeholder="本子ID" x-model="newAlbumId" @keyup.enter="addBookmark()">
                             </div>
-                            <div class="col-md-4">
-                                <input type="text" class="form-control bg-dark text-light border-secondary"
+                            <div class="col-md-3 col-lg-3">
+                                <input type="text" class="form-control form-control-sm bg-dark-subtle"
                                        placeholder="标题（可选）" x-model="newTitle">
                             </div>
-                            <div class="col-md-2">
-                                <input type="text" class="form-control bg-dark text-light border-secondary"
-                                       placeholder="标签（逗号分隔）" x-model="newTags">
+                            <div class="col-md-3 col-lg-2">
+                                <input type="text" class="form-control form-control-sm bg-dark-subtle"
+                                       placeholder="标签,逗号分隔" x-model="newTags">
                             </div>
-                            <div class="col-md-1">
-                                <button class="btn btn-primary w-100" @click="addBookmark()" :disabled="adding">
-                                    <span x-show="!adding"><i class="bi bi-plus"></i></span>
-                                    <span x-show="adding" class="spinner-border spinner-border-sm"></span>
+                            <div class="col-auto">
+                                <button class="btn btn-primary btn-sm" @click="addBookmark()" :disabled="adding">
+                                    <span x-show="!adding"><i class="bi bi-plus me-1"></i>添加</span>
+                                    <span x-show="adding"><span class="spinner-border spinner-border-sm"></span></span>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 批量操作 -->
-                    <div x-show="selectedIds.length > 0" class="alert alert-info mb-3 d-flex justify-content-between align-items-center">
-                        <span>已选择 <span x-text="selectedIds.length"></span> 个书签</span>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-success" @click="batchDownload()">
-                                <i class="bi bi-download"></i> 批量下载
+                    <!-- 批量操作栏 -->
+                    <div x-show="selectedIds.length > 0" class="alert alert-info py-2 px-3 d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-sm">已选择 <strong x-text="selectedIds.length"></strong> 个</span>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-success btn-sm" @click="batchDownload()">
+                                <i class="bi bi-download me-1"></i>批量下载
                             </button>
-                            <button class="btn btn-danger" @click="batchRemove()">
-                                <i class="bi bi-trash"></i> 批量删除
+                            <button class="btn btn-danger btn-sm" @click="batchRemove()">
+                                <i class="bi bi-trash me-1"></i>批量删除
                             </button>
                         </div>
                     </div>
 
                     <!-- 书签列表 -->
                     <div x-show="items.length > 0">
-                        <div class="list-group list-group-flush rounded bg-dark">
+                        <div class="list-group list-group-flush rounded bg-dark-subtle">
                             <template x-for="item in items">
-                                <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center">
-                                    <div class="flex-1">
-                                        <label class="checkbox-label">
-                                            <input type="checkbox" 
-                                                   :checked="selectedIds.includes(item.album_id)"
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2 min-width-0">
+                                        <label class="checkbox-label m-0">
+                                            <input type="checkbox" :checked="selectedIds.includes(item.album_id)"
                                                    @change="toggleSelect(item.album_id)">
                                         </label>
-                                        <span class="badge bg-secondary me-2" x-text="item.album_id"></span>
-                                        <span x-text="item.title || '未命名'"></span>
+                                        <span class="badge bg-secondary flex-shrink-0" style="font-size:.7rem" x-text="'JM' + item.album_id"></span>
+                                        <span class="text-truncate" style="font-size:.88rem" x-text="item.title || ('#' + item.album_id)"></span>
                                         <template x-if="item.tags && item.tags.length > 0">
-                                            <span class="ms-2">
-                                                <template x-for="tag in item.tags">
+                                            <span class="ms-1 d-none d-md-inline-flex gap-1">
+                                                <template x-for="tag in item.tags.slice(0,3)">
                                                     <span class="tag-badge-small" x-text="tag"></span>
                                                 </template>
                                             </span>
                                         </template>
                                     </div>
-                                    <div class="btn-group btn-group-sm">
-                                        <a :href="'/browse/album/' + item.album_id" class="btn btn-outline-info">
+                                    <div class="btn-group btn-group-sm flex-shrink-0">
+                                        <a :href="'/browse/album/' + item.album_id" class="btn btn-outline-info btn-sm" title="详情">
                                             <i class="bi bi-info-circle"></i>
                                         </a>
-                                        <button class="btn btn-outline-success"
+                                        <button class="btn btn-outline-success btn-sm" title="下载"
                                                 @click="downloadAlbum(item.album_id, item.title)">
                                             <i class="bi bi-download"></i>
                                         </button>
-                                        <button class="btn btn-outline-warning"
+                                        <button class="btn btn-outline-warning btn-sm" title="编辑"
                                                 @click="editBookmark(item)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <button class="btn btn-outline-danger"
+                                        <button class="btn btn-outline-danger btn-sm" title="删除"
                                                 @click="removeBookmark(item.album_id)">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -119,50 +115,47 @@
                         </div>
                     </div>
 
-                    <!-- 空书签 -->
-                    <div x-show="items.length === 0 && !loading" class="text-center py-4 text-secondary">
-                        <i class="bi bi-bookmark-x" style="font-size: 3rem"></i>
-                        <p class="mt-2">暂无书签，添加一些吧~</p>
+                    <!-- 空状态 -->
+                    <div x-show="items.length === 0 && !loading" class="text-center py-5">
+                        <i class="bi bi-bookmark-x" style="font-size:2.5rem;color:var(--text-muted)"></i>
+                        <p class="mt-2 text-muted">暂无书签，添加一些吧~</p>
                     </div>
 
                     <!-- 加载中 -->
                     <div x-show="loading" class="text-center py-3">
-                        <div class="spinner-border spinner-border-sm text-secondary"></div>
+                        <div class="spinner-border spinner-border-sm text-muted"></div>
                     </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- 右侧：导入面板 -->
-        <div class="col-lg-4">
-            <div class="card bg-dark-subtle border-secondary">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-upload"></i> 导入书签</h6>
+        <!-- 右侧：导入 + 统计 -->
+        <div class="col-lg-4 mt-3 mt-lg-0">
+            <!-- 导入面板 -->
+            <div class="card mb-3">
+                <div class="card-header py-2 px-3">
+                    <span style="font-weight:600;font-size:.88rem"><i class="bi bi-upload me-1"></i>导入书签</span>
                 </div>
-                <div class="card-body">
-                    <div class="mb-2">
-                        <textarea class="form-control bg-dark text-light border-secondary"
-                                  rows="6" placeholder="粘贴 JSON 格式的书签数据..."
-                                  x-model="importData"></textarea>
-                    </div>
-                    <button class="btn btn-primary w-100" @click="importBookmarks()" :disabled="importing">
-                        <span x-show="!importing"><i class="bi bi-upload"></i> 导入</span>
-                        <span x-show="importing" class="spinner-border spinner-border-sm"></span>
+                <div class="card-body p-3">
+                    <textarea class="form-control form-control-sm bg-dark-subtle"
+                              rows="5" placeholder="粘贴 JSON 格式的书签数据..."
+                              x-model="importData"></textarea>
+                    <button class="btn btn-primary btn-sm w-100 mt-2" @click="importBookmarks()" :disabled="importing">
+                        <span x-show="!importing"><i class="bi bi-upload me-1"></i>导入</span>
+                        <span x-show="importing"><span class="spinner-border spinner-border-sm me-1"></span>导入中</span>
                     </button>
-                    <div x-show="importMsg" class="mt-2 alert py-1" :class="importOk ? 'alert-success' : 'alert-danger'"
-                         x-text="importMsg"></div>
-                    <small class="text-muted mt-2 d-block">
-                        支持从其他设备导出的 JSON 文件导入，自动去重
-                    </small>
+                    <div x-show="importMsg" class="mt-2 alert py-1 px-2" :class="importOk ? 'alert-success' : 'alert-danger'" x-text="importMsg"></div>
+                    <small class="text-muted d-block mt-1">支持从其他设备导出的 JSON 文件，自动去重</small>
                 </div>
             </div>
 
             <!-- 统计信息 -->
-            <div class="card bg-dark-subtle border-secondary mt-3">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-bar-chart"></i> 统计</h6>
+            <div class="card">
+                <div class="card-header py-2 px-3">
+                    <span style="font-weight:600;font-size:.88rem"><i class="bi bi-bar-chart me-1"></i>统计</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="row text-center">
                         <div class="col-6">
                             <div class="stat-value" x-text="items.length"></div>
@@ -179,35 +172,36 @@
     </div>
 
     <!-- 编辑弹窗 -->
-    <div x-show="editingItem" class="modal-overlay" @click.self="closeEdit">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5>编辑书签</h5>
-                <button @click="closeEdit" class="btn-close"></button>
+    <div x-show="editingItem !== null" class="modal-overlay" @click.self="closeEdit()">
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header py-2 px-3">
+                <span style="font-weight:600;font-size:.95rem">编辑书签</span>
+                <button @click="closeEdit()" class="btn-close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-3">
                 <div class="mb-2">
-                    <label class="form-label text-secondary">本子ID</label>
-                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                    <label class="form-label text-muted text-xs">本子ID（只读）</label>
+                    <input type="text" class="form-control form-control-sm bg-dark-subtle"
                            x-model="editingItem.album_id" disabled>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label text-secondary">标题</label>
-                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                    <label class="form-label text-muted text-xs">标题</label>
+                    <input type="text" class="form-control form-control-sm bg-dark-subtle"
                            x-model="editingItem.title">
                 </div>
-                <div class="mb-2">
-                    <label class="form-label text-secondary">标签（逗号分隔）</label>
-                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                <div class="mb-0">
+                    <label class="form-label text-muted text-xs">标签（逗号分隔）</label>
+                    <input type="text" class="form-control form-control-sm bg-dark-subtle"
                            x-model="editingTagsStr">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" @click="closeEdit">取消</button>
-                <button class="btn btn-primary" @click="saveEdit()">保存</button>
+            <div class="modal-footer py-2 px-3">
+                <button class="btn btn-secondary btn-sm" @click="closeEdit()">取消</button>
+                <button class="btn btn-primary btn-sm" @click="saveEdit()">保存</button>
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}
 
@@ -215,247 +209,100 @@
 <script>
 function bookmarksApp() {
     return {
-        items: [],
-        tags: [],
-        selectedTag: '',
-        selectedIds: [],
-        loading: false,
-        adding: false,
-        exporting: false,
-        importing: false,
-        importData: '',
-        importMsg: '',
-        importOk: false,
-        newAlbumId: '',
-        newTitle: '',
-        newTags: '',
-        editingItem: null,
-        editingTagsStr: '',
+        items: [], tags: [], selectedTag: '', selectedIds: [],
+        loading: false, adding: false, exporting: false,
+        importing: false, importData: '', importMsg: '', importOk: false,
+        newAlbumId: '', newTitle: '', newTags: '',
+        editingItem: null, editingTagsStr: '',
 
-        async init() {
-            await this.loadData();
-        },
+        async init() { await this.loadData(); },
 
         async loadData() {
             this.loading = true;
             try {
-                const params = this.selectedTag ? `?tag=${encodeURIComponent(this.selectedTag)}` : '';
-                const resp = await fetch('/favorites/api/list' + params);
-                const data = await resp.json();
-                this.items = data.items || [];
-                await this.loadTags();
-            } catch (e) {
-                console.error(e);
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        async loadTags() {
-            try {
-                const resp = await fetch('/favorites/api/tags');
-                const data = await resp.json();
-                this.tags = data.tags || [];
-            } catch (e) {
-                console.error(e);
-            }
+                var p = this.selectedTag ? '?tag=' + encodeURIComponent(this.selectedTag) : '';
+                var r = await fetch('/favorites/api/list' + p);
+                var d = await r.json();
+                this.items = d.items || [];
+                var tr = await fetch('/favorites/api/tags');
+                this.tags = (await tr.json()).tags || [];
+            } catch (e) { console.error(e); }
+            finally { this.loading = false; }
         },
 
         toggleSelect(id) {
-            const idx = this.selectedIds.indexOf(id);
-            if (idx > -1) {
-                this.selectedIds.splice(idx, 1);
-            } else {
-                this.selectedIds.push(id);
-            }
+            var i = this.selectedIds.indexOf(id);
+            if (i > -1) this.selectedIds.splice(i, 1);
+            else this.selectedIds.push(id);
         },
 
         async addBookmark() {
             if (!this.newAlbumId.trim()) return;
-            
             this.adding = true;
             try {
-                const tags = this.newTags ? this.newTags.split(',').map(t => t.trim()).filter(t => t) : [];
-                const resp = await fetch('/favorites/api/add', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        album_id: this.newAlbumId.trim(),
-                        title: this.newTitle.trim(),
-                        tags: tags,
-                    }),
-                });
-                const result = await resp.json();
-                if (resp.ok) {
-                    showToast('success', result.message);
-                    this.newAlbumId = '';
-                    this.newTitle = '';
-                    this.newTags = '';
-                    await this.loadData();
-                } else {
-                    showToast('error', result.error);
-                }
-            } catch (e) {
-                showToast('error', `添加失败: ${e.message}`);
-            } finally {
-                this.adding = false;
-            }
+                var tgs = this.newTags ? this.newTags.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}) : [];
+                var r = await fetch('/favorites/api/add', { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({album_id:this.newAlbumId.trim(),title:this.newTitle.trim(),tags:tgs}) });
+                var d = await r.json();
+                if (r.ok) { showToast('success', d.message); this.newAlbumId='';this.newTitle='';this.newTags=''; await this.loadData(); }
+                else showToast('error', d.error);
+            } catch (e) { showToast('error', e.message); }
+            finally { this.adding = false; }
         },
 
-        async removeBookmark(albumId) {
-            if (!confirm('确定要删除这个书签吗？')) return;
-            
-            try {
-                const resp = await fetch('/favorites/api/remove', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({album_id: albumId}),
-                });
-                if (resp.ok) {
-                    showToast('success', '删除成功');
-                    await this.loadData();
-                } else {
-                    const result = await resp.json();
-                    showToast('error', result.error);
-                }
-            } catch (e) {
-                showToast('error', `删除失败: ${e.message}`);
-            }
+        async removeBookmark(id) {
+            if (!confirm('\u786e\u5b9a\u5220\u9664\uff1f')) return;
+            var r = await fetch('/favorites/api/remove', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({album_id:id}) });
+            if (r.ok) { showToast('success', '\u5220\u9664\u6210\u529f'); await this.loadData(); }
+            else { var d=await r.json(); showToast('error', d.error); }
         },
 
-        editBookmark(item) {
-            this.editingItem = {...item};
-            this.editingTagsStr = item.tags ? item.tags.join(', ') : '';
-        },
-
-        closeEdit() {
-            this.editingItem = null;
-            this.editingTagsStr = '';
-        },
+        editBookmark(item) { this.editingItem = {...item}; this.editingTagsStr = item.tags ? item.tags.join(', ') : ''; },
+        closeEdit() { this.editingItem = null; this.editingTagsStr = ''; },
 
         async saveEdit() {
             if (!this.editingItem) return;
-            
-            const tags = this.editingTagsStr ? this.editingTagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
-            try {
-                const resp = await fetch('/favorites/api/update', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        album_id: this.editingItem.album_id,
-                        title: this.editingItem.title,
-                        tags: tags,
-                    }),
-                });
-                if (resp.ok) {
-                    showToast('success', '更新成功');
-                    this.closeEdit();
-                    await this.loadData();
-                } else {
-                    const result = await resp.json();
-                    showToast('error', result.error);
-                }
-            } catch (e) {
-                showToast('error', `更新失败: ${e.message}`);
-            }
+            var tgs = this.editingTagsStr ? this.editingTagsStr.split(',').map(function(t){return t.trim();}).filter(function(t){return t;}) : [];
+            var r = await fetch('/favorites/api/update', { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({album_id:this.editingItem.album_id,title:this.editingItem.title,tags:tgs}) });
+            if (r.ok) { showToast('success', '\u66f4\u65b0\u6210\u529f'); this.closeEdit(); await this.loadData(); }
+            else { var d=await r.json(); showToast('error', d.error); }
         },
 
         async downloadAlbum(id, title) {
             try {
-                const resp = await fetch('/download/api/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({album_id: id}),
-                });
-                const result = await resp.json();
-                if (result.task_id) {
-                    showToast('success', `已添加下载: ${title || id}`);
-                    window.TaskManager?.startTracking(result.task_id, title || id);
-                }
-            } catch (e) {
-                showToast('error', `下载失败: ${e.message}`);
-            }
+                var r = await fetch('/download/api/start', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({album_id:id}) });
+                var d = await r.json();
+                if (d.task_id) { showToast('success', '\u5df2\u6dfb\u52a0: '+(title||id)); window.TaskManager&&window.TaskManager.startTracking(d.task_id,title||id); }
+            } catch (e) { showToast('error', e.message); }
         },
 
         async batchDownload() {
-            if (this.selectedIds.length === 0) return;
-            
-            try {
-                const resp = await fetch('/favorites/api/batch/download', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({album_ids: this.selectedIds}),
-                });
-                const result = await resp.json();
-                if (resp.ok) {
-                    showToast('success', `已添加 ${result.count} 个下载任务`);
-                    this.selectedIds = [];
-                    window.location.href = '/download';
-                } else {
-                    showToast('error', result.error);
-                }
-            } catch (e) {
-                showToast('error', `批量下载失败: ${e.message}`);
-            }
+            if (!this.selectedIds.length) return;
+            var r = await fetch('/favorites/api/batch/download', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({album_ids:this.selectedIds}) });
+            var d = await r.json();
+            if (r.ok) { showToast('success', '\u5df2\u6dfb\u52a0 '+d.count+' \u4e2a\u4efb\u52a1'); this.selectedIds=[]; window.location.href='/download'; }
+            else showToast('error', d.error);
         },
 
         async batchRemove() {
-            if (this.selectedIds.length === 0) return;
-            if (!confirm(`确定要删除选中的 ${this.selectedIds.length} 个书签吗？`)) return;
-            
-            for (const id of this.selectedIds) {
-                await fetch('/favorites/api/remove', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({album_id: id}),
-                });
-            }
-            showToast('success', '批量删除完成');
-            this.selectedIds = [];
-            await this.loadData();
+            if (!this.selectedIds.length||!confirm('\u786e\u5b9a\u5220\u9664 '+this.selectedIds.length+' \u4e2a\u4e66\u7b7e\uff1f')) return;
+            for (var i=0;i<this.selectedIds.length;i++) await fetch('/favorites/api/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:this.selectedIds[i]})});
+            showToast('success','\u6279\u91cf\u5220\u9664\u5b8c\u6210'); this.selectedIds=[]; await this.loadData();
         },
 
-        async exportJSON() {
-            this.exporting = true;
-            try {
-                window.open('/favorites/api/export/json', '_blank');
-            } finally {
-                this.exporting = false;
-            }
-        },
-
-        async exportCSV() {
-            this.exporting = true;
-            try {
-                window.open('/favorites/api/export/csv', '_blank');
-            } finally {
-                this.exporting = false;
-            }
-        },
+        async exportJSON() { this.exporting=true; try{window.open('/favorites/api/export/json','_blank')} finally{this.exporting=false} },
+        async exportCSV() { this.exporting=true; try{window.open('/favorites/api/export/csv','_blank')} finally{this.exporting=false} },
 
         async importBookmarks() {
             if (!this.importData.trim()) return;
-            
-            this.importing = true;
+            this.importing=true;
             try {
-                const resp = await fetch('/favorites/api/import', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({data: this.importData.trim()}),
-                });
-                const result = await resp.json();
-                this.importOk = resp.ok;
-                this.importMsg = resp.ok ? result.message : result.error;
-                if (resp.ok) {
-                    this.importData = '';
-                    await this.loadData();
-                }
-            } catch (e) {
-                this.importOk = false;
-                this.importMsg = `导入失败: ${e.message}`;
-            } finally {
-                this.importing = false;
-            }
+                var r = await fetch('/favorites/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:this.importData.trim()})});
+                var d=await r.json(); this.importOk=r.ok; this.importMsg=r.ok?d.message:d.error;
+                if(r.ok){this.importData='';await this.loadData();}
+            } catch(e){this.importOk=false;this.importMsg=e.message;}
+            finally{this.importing=false;}
         },
     };
 }

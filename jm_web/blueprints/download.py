@@ -70,6 +70,55 @@ def api_start():
     return jsonify({"task_id": task_id})
 
 
+@bp.route("/api/urls/<album_id>")
+def api_image_urls(album_id: str):
+    """获取本子所有图片的 CDN URL 列表（不下载文件，仅获取链接）.
+
+    用于 Web 模式下的浏览器端下载：前端拿到 URL 后，
+    可直接展示图片或用 JSZip 客户端打包为 ZIP 下载。
+    """
+    from ..services.jm_client import get_client, extract_album_id
+
+    converted = extract_album_id(album_id)
+    if converted:
+        album_id = converted
+
+    try:
+        client = get_client()
+        album = client.get_album_detail(album_id)
+        title = getattr(album, "title", "") or album_id
+        photos = list(album)
+
+        all_images = []
+        for pi, photo in enumerate(photos):
+            ptitle = getattr(photo, "title", "") or f"第{pi+1}章"
+            try:
+                pdetail = client.get_photo_detail(photo.photo_id, False)
+                images = list(pdetail)
+                for ii, img in enumerate(images):
+                    url = getattr(img, "img_url", "")
+                    if url:
+                        all_images.append({
+                            "chapter": ptitle,
+                            "chapter_index": pi,
+                            "index": ii,
+                            "url": url,
+                        })
+            except Exception as e:
+                current_app.logger.warning(f"获取章节 {photo.photo_id} 图片失败: {e}")
+                continue
+
+        return jsonify({
+            "album_id": album_id,
+            "title": title,
+            "total_chapters": len(photos),
+            "total_images": len(all_images),
+            "images": all_images,
+        })
+    except Exception as e:
+        return jsonify({"error": f"获取图片链接失败: {str(e)[:300]}"}), 500
+
+
 @bp.route("/api/start/batch", methods=["POST"])
 def api_start_batch():
     """批量提交下载任务."""

@@ -144,17 +144,96 @@
             <!-- ============================================ -->
             <section x-show="activePage === 'download'"
                      x-transition:enter="spaEnter" x-transition:leave="spaLeave"
-                     x-data="downloadManager()" x-init="$watch('activePage', (v) => { if(v==='download') init(); })"
+                     x-data="{% if is_web_mode %}webDownloader(){% else %}downloadManager(){% endif %}"
+                     x-init="$watch('activePage', (v) => { if(v==='download') init(); })"
                      style="display:none; flex-direction: column; gap: 16px; flex: 1; min-height: 0;">
 
                 {% if is_web_mode %}
-                <!-- Web 模式提示条 -->
+                <!-- ====== Web 模式：浏览器端下载（零服务器存储）====== -->
                 <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);font-size:.82rem;color:#F59E0B">
-                    <i class="bi bi-cloud" style="font-size:1.05rem"></i>
-                    <span><strong>Web 模式</strong> — 文件将下载到服务器临时存储，完成后可打包为 ZIP 下载到本地</span>
+                    <i class="bi bi-cloud-download" style="font-size:1.05rem"></i>
+                    <span><strong>Web 模式</strong> — 图片直接从 CDN 下载到你的浏览器，无需服务器存储空间</span>
                 </div>
-                {% endif %}
 
+                <!-- 输入 ID + 获取链接 -->
+                <div class="mac-panel">
+                    <div class="mac-panel-body" style="padding:14px 18px;">
+                        <form @submit.prevent="fetchUrls()" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+                            <div class="mac-form-group" style="margin-bottom:0;min-width:220px;flex:1;">
+                                <label class="mac-form-label">本子 ID</label>
+                                <input type="text" class="mac-input" placeholder="输入 ID 或粘贴含 ID 的文本"
+                                       x-model="albumId" required :disabled="loading">
+                                <small style="display:block;margin-top:3px;font-size:.72rem;color:var(--text-muted)">支持自动提取文本中的数字 ID</small>
+                            </div>
+                            <button type="submit" class="mac-btn mac-btn-primary" :disabled="loading || !albumId.trim()"
+                                    style="min-width:130px;">
+                                <template x-if="!loading">
+                                    <span><i class="bi bi-link-45deg"></i>获取图片链接</span>
+                                </template>
+                                <template x-if="loading">
+                                    <span><span class="spinner-border spinner-border-sm" style="width:14px;height:14px;border-width:2px;"></span> 获取中...</span>
+                                </template>
+                            </button>
+                        </form>
+
+                        <!-- 错误提示 -->
+                        <div x-show="errorMsg" class="alert py-2 px-3 mt-3 alert-danger"
+                             style="border-radius:8px;font-size:.82rem" x-text="errorMsg"></div>
+                    </div>
+                </div>
+
+                <!-- 结果区域：图片浏览 + 打包下载 -->
+                <div x-show="images.length > 0" class="mac-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                    <div class="mac-panel-header">
+                        <span class="mac-panel-title">
+                            <i class="bi bi-images"></i>
+                            <span x-text="title || albumId"></span>
+                            <span style="font-size:.76rem;color:var(--text-muted);font-weight:400;margin-left:6px;"
+                                  x-text="totalChapters + ' 章 / ' + images.length + ' 张'"></span>
+                        </span>
+                        <div style="display:flex;gap:6px;">
+                            <button class="mac-btn mac-btn-success mac-btn-sm" @click="downloadAllAsZip()" :disabled="zipProgress > 0">
+                                <i class="bi bi-file-zip"></i>
+                                <span x-show="zipProgress === 0">全部打包下载 (ZIP)</span>
+                                <span x-show="zipProgress > 0" x-text="'打包中 ' + zipProgress + '/' + images.length"></span>
+                            </button>
+                            <button class="mac-btn mac-btn-secondary mac-btn-sm" @click="images=[];title='';errorMsg=''">
+                                <i class="bi bi-x-lg"></i>关闭
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mac-panel-body" style="padding:12px 14px;overflow-y:auto;flex:1;">
+                        <!-- 章节分组 -->
+                        <template x-for="(chapter, ci) in chapterGroups" :key="ci">
+                            <div style="margin-bottom:14px;">
+                                <div style="font-size:.8rem;font-weight:700;color:var(--accent);margin-bottom:8px;padding-left:4px;
+                                            display:flex;align-items:center;gap:6px;">
+                                    <i class="bi bi-folder2-open" style="font-size:.78rem"></i>
+                                    <span x-text="chapter.name"></span>
+                                    <span style="font-size:.7rem;color:var(--text-muted);font-weight:400">(<span x-text="chapter.images.length"></span> 张)</span>
+                                </div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;">
+                                    <template x-for="(img, ii) in chapter.images" :key="ci+'-'+ii">
+                                        <a :href="img.url" target="_blank" rel="noopener noreferrer"
+                                           style="aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:var(--input-bg);
+                                                  border:1px solid var(--border-glass);display:block;text-decoration:none;position:relative;">
+                                            <img :src="img.url" :alt="img.index+1" loading="lazy"
+                                                 style="width:100%;height:100%;object-fit:cover;transition:transform 0.25s ease"
+                                                 @mouseenter="$el.style.transform='scale(1.03)'"
+                                                 @mouseleave="$el.style.transform='scale(1)'">
+                                            <span style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.55);color:#fff;font-size:.65rem;padding:1px 6px;border-radius:4px;"
+                                                  x-text="img.index+1"></span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {% else %}
+                <!-- ====== 本地模式：原有服务器下载流程 ====== -->
                 <!-- 新建任务面板 -->
                 <div class="mac-panel" x-data="{ showAdvanced: false }">
                     <div class="mac-panel-header">
@@ -216,6 +295,8 @@
                 <div id="task-list-container" hx-get="/download/partial/task-list" hx-trigger="every 2s" hx-swap="innerHTML" style="flex:1">
                     {% include "partials/task_list.html" %}
                 </div>
+                {% endif %}
+
             </section>
 
 
@@ -399,6 +480,9 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- JSZip — 客户端 ZIP 打包库（Web 模式浏览器下载用） -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
 <!-- ============================================================
      SPA 路由控制器 — Alpine.js 单页应用核心逻辑
      ============================================================ -->
@@ -510,7 +594,98 @@ function browseApp(){
 </script>
 
 <script>
-/** 下载管理页 */
+/** Web 模式下载器 — 浏览器端获取图片链接 + JSZip 打包下载 */
+function webDownloader(){
+    return {
+        albumId:'', title:'', loading:false, errorMsg:'',
+        images:[], totalChapters:0, zipProgress:0,
+
+        get chapterGroups(){
+            // 按章节分组
+            var groups = {};
+            this.images.forEach(function(img){
+                if(!groups[img.chapter]) groups[img.chapter] = { name: img.chapter, images: [] };
+                groups[img.chapter].images.push(img);
+            });
+            return Object.values(groups);
+        },
+
+        init(){ /* 无需初始化 */ },
+
+        async fetchUrls(){
+            if(!this.albumId.trim()) return;
+            this.loading = true; this.errorMsg = ''; this.images = []; this.title = '';
+            try{
+                // 提取数字 ID
+                var raw = this.albumId.trim();
+                var m = raw.match(/\d{5,7}/);
+                var id = m ? m[0] : raw;
+
+                var r = await fetch('/download/api/urls/' + encodeURIComponent(id));
+                var d = await r.json();
+
+                if(d.error){ this.errorMsg = d.error; return; }
+
+                this.title = d.title || id;
+                this.images = d.images || [];
+                this.totalChapters = d.total_chapters || 0;
+                this.albumId = ''; // 清空输入
+                showToast('success', '\u83b7\u53d6\u6210\u529f\uff1a' + this.images.length + ' \u5f20\u56fe\u7247');
+            }catch(e){
+                this.errorMsg = '\u8bf7\u6c82\u5931\u8d25: ' + e.message;
+            }finally{ this.loading = false; }
+        },
+
+        async downloadAllAsZip(){
+            if(this.images.length === 0) return;
+            this.zipProgress = 1;
+
+            try{
+                var zip = new JSZip();
+                var folder = zip.folder(this.title || 'album');
+
+                // 并发下载图片（每次 5 张）
+                var BATCH = 5;
+                for(var i = 0; i < this.images.length; i += BATCH){
+                    var batch = this.images.slice(i, i + BATCH);
+                    await Promise.all(batch.map(async function(img){
+                        try{
+                            var resp = await fetch(img.url);
+                            var blob = await resp.blob();
+                            var ext = img.url.split('.').pop().split('?')[0] || 'jpg';
+                            var fname = (img.chapter.replace(/[\/:*?"<>|]/g,'_') || '') +
+                                        '/' + String(img.index + 1).padStart(4,'0') + '.' + ext;
+                            folder.file(fname, blob);
+                        }catch(e){
+                            console.warn('\u4e0b\u8f7d\u56fe\u7247\u5931\u8d25:', img.url, e);
+                        }
+                    }));
+                    this.zipProgress = Math.min(i + BATCH, this.images.length);
+                }
+
+                // 生成并触发下载
+                var content = await zip.generateAsync({ type: 'blob' });
+                var safeName = (this.title || 'download').replace(/[\/:*?"<>|]/g, '_') + '.zip';
+                var url = URL.createObjectURL(content);
+                var a = document.createElement('a');
+                a.href = url; a.download = safeName;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('success', safeName + ' \u5df2\u4e0b\u8f7d');
+            }catch(e){
+                showToast('error', '\u6253\u5305\u5931\u8d25: ' + e.message);
+            }finally{
+                this.zipProgress = 0;
+            }
+        },
+    };
+}
+</script>
+
+<script>
+/** 下载管理页（本地模式） */
 function downloadManager(){
     return {
         albumId:'', exportFormats:[], imageSuffix:'', threadCount:null,

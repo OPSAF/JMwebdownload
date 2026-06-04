@@ -14,49 +14,51 @@
         </div>
         <div class="card-body">
             <form @submit.prevent="submitDownload()">
-                <div class="row g-2">
-                    <div class="col-md-4">
+                <!-- 主行：ID + 格式 + 下载按钮 -->
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-md-4 col-lg-5">
                         <label class="form-label text-secondary">本子ID</label>
                         <input type="text" class="form-control bg-dark text-light border-secondary"
-                               placeholder="输入 JM 本子ID" x-model="albumId" required
+                               placeholder="输入 JM 本子ID，支持粘贴含ID的文本" x-model="albumId" required
                                @paste="handlePaste($event)">
-                        <small class="text-muted">支持从含ID的文本中自动提取</small>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-auto">
                         <label class="form-label text-secondary">导出格式</label>
                         <div class="d-flex gap-2 pt-1">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" value="pdf" x-model="exportFormats">
-                                <label class="form-check-label text-light">PDF</label>
+                                <label class="form-check-label text-light text-sm">PDF</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" value="zip" x-model="exportFormats">
-                                <label class="form-check-label text-light">ZIP</label>
+                                <label class="form-check-label text-light text-sm">ZIP</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" value="long_img" x-model="exportFormats">
-                                <label class="form-check-label text-light">长图</label>
+                                <label class="form-check-label text-light text-sm">长图</label>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-auto">
                         <label class="form-label text-secondary">图片格式</label>
-                        <select class="form-select bg-dark text-light border-secondary" x-model="imageSuffix">
+                        <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                                style="min-width:90px" x-model="imageSuffix">
                             <option value="">默认</option>
                             <option value=".jpg">JPG</option>
                             <option value=".png">PNG</option>
                             <option value=".webp">WebP</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-auto">
                         <label class="form-label text-secondary">并发数</label>
-                        <input type="number" class="form-control bg-dark text-light border-secondary"
-                               x-model="threadCount" placeholder="默认" min="1" max="50">
+                        <input type="number" class="form-control form-control-sm bg-dark text-light border-secondary"
+                               style="width:80px" x-model="threadCount" placeholder="默认" min="1" max="50">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100" :disabled="submitting">
-                            <span x-show="!submitting"><i class="bi bi-download"></i> 开始下载</span>
-                            <span x-show="submitting" class="spinner-border spinner-border-sm"></span>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-success btn-sm" :disabled="submitting"
+                                style="min-width:110px; padding: 0.35rem 1rem;">
+                            <span x-show="!submitting"><i class="bi bi-download me-1"></i> 开始下载</span>
+                            <span x-show="submitting"><span class="spinner-border spinner-border-sm me-1"></span>提交中...</span>
                         </button>
                     </div>
                 </div>
@@ -65,19 +67,19 @@
                 <div x-show="showAdvanced" x-collapse class="mt-3 pt-3 border-top border-secondary">
                     <div class="row g-2">
                         <div class="col-md-4">
-                            <label class="form-label text-secondary">登录用户名</label>
-                            <input type="text" class="form-control bg-dark text-light border-secondary"
-                                   placeholder="敏感本子需登录" x-model="loginUsername">
+                            <label class="form-label text-secondary">登录用户名（敏感本子需要）</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   placeholder="禁漫账号" x-model="loginUsername">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label text-secondary">登录密码</label>
-                            <input type="password" class="form-control bg-dark text-light border-secondary"
+                            <input type="password" class="form-control form-control-sm bg-dark text-light border-secondary"
                                    placeholder="禁漫密码" x-model="loginPassword">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label text-secondary">代理</label>
-                            <input type="text" class="form-control bg-dark text-light border-secondary"
-                                   placeholder="127.0.0.1:7890" x-model="proxy">
+                            <label class="form-label text-secondary">代理地址</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                                   placeholder="如 127.0.0.1:7890" x-model="proxy">
                         </div>
                     </div>
                 </div>
@@ -109,14 +111,12 @@ function downloadManager() {
         submitting: false,
 
         init() {
-            // 初始化 TaskManager（如果还没初始化）
             if (!window.TaskManager) {
                 window.TaskManager = new TaskTracker();
             }
         },
 
         handlePaste(event) {
-            // 从粘贴的文本中提取数字ID（如 "JM438696" 或链接）
             setTimeout(() => {
                 const text = this.albumId;
                 const match = text.match(/(\d{5,7})/);
@@ -128,7 +128,6 @@ function downloadManager() {
 
         async submitDownload() {
             if (!this.albumId.trim()) return;
-            // 提取纯数字
             const match = this.albumId.trim().match(/\d{5,7}/);
             const pureId = match ? match[0] : this.albumId.trim();
 
@@ -151,7 +150,6 @@ function downloadManager() {
                 if (result.task_id) {
                     showToast('success', `任务已创建: ${result.task_id}`);
                     window.TaskManager.startTracking(result.task_id, pureId);
-                    // 清空输入
                     this.albumId = '';
                     this.exportFormats = [];
                 } else {

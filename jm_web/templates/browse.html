@@ -4,65 +4,75 @@
 {% block content %}
 
 <div x-data="browseApp()" x-init="init()">
-    <!-- 搜索栏 + 分类切换 -->
-    <div class="row mb-3">
-        <div class="col-lg-8">
+    <!-- 顶部控制区 -->
+    <div class="card bg-dark-subtle border-secondary mb-3">
+        <div class="card-body pb-2">
             <!-- Tab 切换 -->
             <ul class="nav nav-pills mb-3">
                 <li class="nav-item">
                     <button class="nav-link" :class="mode === 'hot' ? 'active' : ''"
-                            @click="mode = 'hot'; page = 1; doHot()">🔥 热门</button>
+                            @click="switchMode('hot')">🔥 热门</button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" :class="mode === 'rankings' ? 'active' : ''"
-                            @click="mode = 'rankings'; page = 1; doRankings()">📊 排行榜</button>
+                            @click="switchMode('rankings')">📊 排行榜</button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" :class="mode === 'search' ? 'active' : ''"
-                            @click="mode = 'search'; page = 1; doSearch()">🔍 搜索</button>
+                            @click="switchMode('search')">🔍 搜索</button>
                 </li>
             </ul>
 
-            <!-- 热门模式（默认显示的本周热门） -->
-            <div x-show="mode === 'hot'" class="d-flex gap-2 flex-wrap">
-                <span class="text-secondary">本周热门本子</span>
+            <!-- 热门模式工具栏 -->
+            <div x-show="mode === 'hot'" class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-secondary text-sm">本周热门本子</span>
                 <button class="btn btn-sm btn-outline-light" @click="page = 1; doHot()"
                         :disabled="loading">
-                    <span x-show="!loading">🔄 刷新</span>
-                    <span x-show="loading" class="spinner-border spinner-border-sm"></span>
+                    <span x-show="!loading"><i class="bi bi-arrow-clockwise"></i> 刷新</span>
+                    <span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
                 </button>
             </div>
 
-            <!-- 排行榜模式 -->
-            <div x-show="mode === 'rankings'" class="d-flex gap-2 flex-wrap">
-                <select class="form-select bg-dark text-light border-secondary w-auto" x-model="rankTime" style="max-width:120px">
-                    <option value="ALL">全部时间</option>
-                    <option value="TODAY">今日</option>
-                    <option value="WEEK" selected>本周</option>
-                    <option value="MONTH">本月</option>
-                </select>
-                <select class="form-select bg-dark text-light border-secondary w-auto" x-model="rankOrder" style="max-width:120px">
-                    <option value="VIEW" selected>按观看</option>
-                    <option value="LIKE">按点赞</option>
-                    <option value="LATEST">按最新</option>
-                </select>
-                <button class="btn btn-sm btn-outline-light" @click="page = 1; doRankings()"
-                        :disabled="loading">
-                    <span x-show="!loading">🔄 刷新</span>
-                    <span x-show="loading" class="spinner-border spinner-border-sm"></span>
-                </button>
-            </div>
-
-            <!-- 搜索模式 -->
-            <div x-show="mode === 'search'">
-                <div class="input-group">
-                    <input type="text" class="form-control bg-dark text-light border-secondary"
-                           placeholder="搜索关键字、标签..." x-model="searchQuery"
-                           @keyup.enter="page = 1; doSearch()">
-                    <button class="btn btn-warning" @click="page = 1; doSearch()"
+            <!-- 排行榜模式工具栏 -->
+            <div x-show="mode === 'rankings'" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                            style="min-width:110px" x-model="rankTime">
+                        <option value="ALL">全部时间</option>
+                        <option value="TODAY">今日</option>
+                        <option value="WEEK" selected>本周</option>
+                        <option value="MONTH">本月</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary"
+                            style="min-width:110px" x-model="rankOrder">
+                        <option value="VIEW" selected>按观看</option>
+                        <option value="LIKE">按点赞</option>
+                        <option value="LATEST">按最新</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-light" @click="page = 1; doRankings()"
                             :disabled="loading">
-                        <span x-show="!loading">搜索</span>
-                        <span x-show="loading" class="spinner-border spinner-border-sm"></span>
+                        <span x-show="!loading"><i class="bi bi-arrow-clockwise"></i> 刷新</span>
+                        <span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 搜索模式工具栏 -->
+            <div x-show="mode === 'search'" class="row g-2 align-items-end">
+                <div class="col-md-6 col-lg-7">
+                    <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                           placeholder="搜索关键字、标签、作者..." x-model="searchQuery"
+                           @keyup.enter="page = 1; doSearch()">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" @click="page = 1; doSearch()"
+                            :disabled="loading">
+                        <span x-show="!loading"><i class="bi bi-search"></i> 搜索</span>
+                        <span x-show="loading"><span class="spinner-border spinner-border-sm"></span></span>
                     </button>
                 </div>
             </div>
@@ -85,7 +95,7 @@
 <script>
 function browseApp() {
     return {
-        mode: 'hot',  // 默认显示热门
+        mode: 'hot',
         searchQuery: '',
         page: 1,
         rankTime: 'WEEK',
@@ -93,8 +103,15 @@ function browseApp() {
         loading: false,
 
         init() {
-            // 默认加载热门
             this.doHot();
+        },
+
+        switchMode(newMode) {
+            if (this.mode === newMode) return;
+            this.mode = newMode;
+            this.page = 1;
+            if (newMode === 'hot') this.doHot();
+            else if (newMode === 'rankings') this.doRankings();
         },
 
         doHot() {

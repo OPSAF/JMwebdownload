@@ -21,22 +21,22 @@
                 </div>
                 <div class="card-body">
                     <!-- 标签筛选 -->
-                    <div class="mb-3 flex-wrap gap-2" x-show="tags.length > 0">
+                    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" x-show="tags.length > 0">
                         <span class="text-secondary text-sm">筛选标签:</span>
-                        <button 
+                        <button
                             class="tag-badge"
                             :class="{ active: !selectedTag }"
                             @click="selectedTag = ''">
                             全部
                         </button>
-                        <button 
-                            v-for="tag in tags" 
-                            :key="tag"
-                            class="tag-badge"
-                            :class="{ active: selectedTag === tag }"
-                            @click="selectedTag = tag">
-                            {{ tag }}
-                        </button>
+                        <template x-for="tag in tags">
+                            <button
+                                class="tag-badge"
+                                :class="{ active: selectedTag === tag }"
+                                @click="selectedTag = tag"
+                                x-text="tag">
+                            </button>
+                        </template>
                     </div>
 
                     <!-- 添加新书签表单 -->
@@ -89,9 +89,13 @@
                                         </label>
                                         <span class="badge bg-secondary me-2" x-text="item.album_id"></span>
                                         <span x-text="item.title || '未命名'"></span>
-                                        <span v-if="item.tags && item.tags.length > 0" class="ms-2">
-                                            <span v-for="tag in item.tags" :key="tag" class="tag-badge-small">{{ tag }}</span>
-                                        </span>
+                                        <template x-if="item.tags && item.tags.length > 0">
+                                            <span class="ms-2">
+                                                <template x-for="tag in item.tags">
+                                                    <span class="tag-badge-small" x-text="tag"></span>
+                                                </template>
+                                            </span>
+                                        </template>
                                     </div>
                                     <div class="btn-group btn-group-sm">
                                         <a :href="'/browse/album/' + item.album_id" class="btn btn-outline-info">

@@ -4,7 +4,7 @@ import math
 
 from flask import Blueprint, render_template, request, jsonify, current_app
 
-from ..services.jm_client import get_client, get_option, get_magic_constants
+from ..services.jm_client import get_client, get_option, get_magic_constants, parse_chinese_number
 
 bp = Blueprint("search", __name__, url_prefix="/browse")
 
@@ -173,6 +173,11 @@ def album_detail_page(album_id: str):
 def album_detail_api(album_id: str):
     """本子详情 JSON API."""
     try:
+        # 尝试将中文数字转换为阿拉伯数字
+        converted = parse_chinese_number(album_id)
+        if converted:
+            album_id = converted
+        
         client = get_client()
         album = client.get_album_detail(album_id)
 
@@ -209,6 +214,11 @@ def album_detail_api(album_id: str):
 def album_photos_api(album_id: str):
     """获取本子的章节列表（HTMX partial）."""
     try:
+        # 尝试将中文数字转换为阿拉伯数字
+        converted = parse_chinese_number(album_id)
+        if converted:
+            album_id = converted
+        
         client = get_client()
         album = client.get_album_detail(album_id)
 

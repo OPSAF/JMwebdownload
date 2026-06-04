@@ -5,6 +5,7 @@ import time
 
 from flask import Blueprint, render_template, request, jsonify, Response, current_app
 
+from ..services.jm_client import parse_chinese_number
 from ..services.downloader import (
     start_download,
     cancel_task,
@@ -48,6 +49,11 @@ def api_start():
     album_id = data.get("album_id", "").strip()
     if not album_id:
         return jsonify({"error": "album_id 必填"}), 400
+    
+    # 尝试将中文数字转换为阿拉伯数字
+    converted = parse_chinese_number(album_id)
+    if converted:
+        album_id = converted
 
     task_id = start_download(
         album_id=album_id,
@@ -79,7 +85,12 @@ def api_start_batch():
 
     task_ids = []
     for aid in album_ids:
-        task_id = start_download(album_id=str(aid).strip(), **options)
+        album_id = str(aid).strip()
+        # 尝试将中文数字转换为阿拉伯数字
+        converted = parse_chinese_number(album_id)
+        if converted:
+            album_id = converted
+        task_id = start_download(album_id=album_id, **options)
         task_ids.append(task_id)
 
     return jsonify({"task_ids": task_ids})

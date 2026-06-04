@@ -38,22 +38,22 @@
     <ul class="pagination pagination-sm justify-content-center">
         <li class="page-item {{ 'disabled' if page <= 1 }}">
             <button class="page-link"
-                    hx-get="{{ url_for('search.rankings_page', time=time, category=category, order_by=order_by, page=page-1) }}"
+                    hx-get="{{ url_for('search.rankings', time=time, category=category, order_by=order_by, page=page-1) }}"
                     hx-target="#search-results-area" hx-swap="innerHTML"
                     {{ 'disabled' if page <= 1 }}>‹</button>
-        </li>
-        {% set sp = [1, page-2]|sort|last %}
-        {% set ep = [total_pages+1, page+3]|sort|first %}
-        {% for p in range(sp, ep) %}
-        <li class="page-item {{ 'active' if p == page }}">
-            <button class="page-link"
-                    hx-get="{{ url_for('search.rankings_page', time=time, category=category, order_by=order_by, page=p) }}"
+                </li>
+                {% set sp = [1, page-2]|sort|last %}
+                {% set ep = [total_pages+1, page+3]|sort|first %}
+                {% for p in range(sp, ep) %}
+                <li class="page-item {{ 'active' if p == page }}">
+                    <button class="page-link"
+                            hx-get="{{ url_for('search.rankings', time=time, category=category, order_by=order_by, page=p) }}"
                     hx-target="#search-results-area" hx-swap="innerHTML">{{ p }}</button>
         </li>
         {% endfor %}
         <li class="page-item {{ 'disabled' if page >= total_pages }}">
             <button class="page-link"
-                    hx-get="{{ url_for('search.rankings_page', time=time, category=category, order_by=order_by, page=page+1) }}"
+                    hx-get="{{ url_for('search.rankings', time=time, category=category, order_by=order_by, page=page+1) }}"
                     hx-target="#search-results-area" hx-swap="innerHTML"
                     {{ 'disabled' if page >= total_pages }}>›</button>
         </li>

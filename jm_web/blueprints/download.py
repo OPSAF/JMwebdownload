@@ -22,9 +22,8 @@ bp = Blueprint("download", __name__, url_prefix="/download")
 
 @bp.route("/")
 def index():
-    """下载管理页面."""
-    tasks_list = [task_to_dict(t) for t in get_all_tasks()]
-    return render_template("download.html", tasks=tasks_list)
+    """下载管理页面 → 重定向到 SPA."""
+    return redirect("/app#download", code=302)
 
 
 # ============================================================

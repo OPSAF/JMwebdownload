@@ -473,8 +473,8 @@ function spaRouter() {
             // 更新浏览器标题
             document.title = this.pages[target].title + ' \u2014 JM Downloader';
 
-            // 更新 body 的页面类名（用于背景图等）
-            document.body.className = 'page-app';
+            // 更新 body 的页面类名（用于背景图切换）
+            document.body.className = 'page-' + target;
 
             // 触发自定义事件，供外部监听
             window.dispatchEvent(new CustomEvent('spa:pageChange', {

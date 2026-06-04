@@ -32,8 +32,8 @@ def _safe_path(relative_path: str) -> Path:
 
 @bp.route("/")
 def index():
-    """文件浏览器主页."""
-    return render_template("files.html")
+    """文件浏览器主页 → 重定向到 SPA."""
+    return redirect("/app#files", code=302)
 
 
 # ============================================================

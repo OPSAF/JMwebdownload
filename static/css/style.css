@@ -1339,17 +1339,23 @@ body.page-index .main-content {
     margin: 0 auto 2rem;
     border-radius: 16px;
     overflow: hidden;
-    background: var(--bg-glass);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--border-glass);
+    /* 半透明背景：亮色 ~65% 不透明度，暗色同理 */
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(28px) saturate(170%);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow:
-        0 4px 24px rgba(0, 0, 0, 0.08),
-        0 12px 48px rgba(0, 0, 0, 0.06),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        0 4px 24px rgba(0, 0, 0, 0.06),
+        0 12px 48px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
     animation: macWindowIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
     transform: translateY(20px) scale(0.98);
+}
+
+[data-theme="dark"] .mac-window {
+    background: rgba(25, 25, 30, 0.55);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 @keyframes macWindowIn {
@@ -1454,7 +1460,7 @@ body.page-index .main-content {
     width: 210px;
     min-width: 210px;
     padding: 12px 8px 16px;
-    background: rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.02);
     border-right: 1px solid var(--border-glass);
     display: flex;
     flex-direction: column;
@@ -1465,7 +1471,7 @@ body.page-index .main-content {
 }
 
 [data-theme="dark"] .mac-sidebar {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.08);
 }
 
 .mac-sidebar-section {
@@ -1649,13 +1655,17 @@ body.page-index .main-content {
    macOS 卡片面板 (Panel Card)
    ============================================================ */
 .mac-panel {
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--border-glass);
     border-radius: 14px;
     overflow: hidden;
     transition: all 0.25s ease;
+}
+
+[data-theme="dark"] .mac-panel {
+    background: rgba(30, 30, 35, 0.45);
 }
 
 .mac-panel:hover {
@@ -1749,14 +1759,19 @@ body.page-index .main-content {
    macOS 任务卡片 (Task Card — Download Manager)
    ============================================================ */
 .mac-task-card {
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     border-radius: 14px;
     padding: 16px 18px;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     overflow: hidden;
+}
+
+[data-theme="dark"] .mac-task-card {
+    background: rgba(30, 30, 35, 0.45);
 }
 
 .mac-task-card::before {
@@ -1883,8 +1898,9 @@ body.page-index .main-content {
 }
 
 .mac-result-card {
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
     padding: 14px;
@@ -1895,6 +1911,10 @@ body.page-index .main-content {
     display: block;
     position: relative;
     overflow: hidden;
+}
+
+[data-theme="dark"] .mac-result-card {
+    background: rgba(30, 30, 35, 0.45);
 }
 
 .mac-result-card::after {
@@ -2098,8 +2118,9 @@ body.page-index .main-content {
 }
 
 .mac-bookmark-card {
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
     padding: 14px 16px;
@@ -2108,6 +2129,10 @@ body.page-index .main-content {
     align-items: center;
     gap: 12px;
     position: relative;
+}
+
+[data-theme="dark"] .mac-bookmark-card {
+    background: rgba(30, 30, 35, 0.45);
 }
 
 .mac-bookmark-card:hover {
@@ -2214,10 +2239,14 @@ body.page-index .main-content {
 .mac-stat-card {
     text-align: center;
     padding: 16px 12px;
-    background: var(--bg-glass);
+    background: rgba(255, 255, 255, 0.35);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
     transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .mac-stat-card {
+    background: rgba(30, 30, 35, 0.4);
 }
 
 .mac-stat-value {
@@ -2489,17 +2518,22 @@ body.page-index .main-content {
 }
 
 .mac-modal-dialog {
-    background: var(--bg-glass);
-    backdrop-filter: blur(24px);
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
     border: 1px solid var(--border-glass);
     border-radius: 16px;
     width: 92%;
     max-width: 440px;
     box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        0 20px 60px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
     animation: macModalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
+}
+
+[data-theme="dark"] .mac-modal-dialog {
+    background: rgba(25, 25, 30, 0.6);
 }
 
 @keyframes macModalSlideUp {

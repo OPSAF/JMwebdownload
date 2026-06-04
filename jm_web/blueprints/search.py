@@ -11,9 +11,8 @@ bp = Blueprint("search", __name__, url_prefix="/browse")
 
 @bp.route("/")
 def index():
-    """搜索/浏览主页."""
-    magic = get_magic_constants()
-    return render_template("browse.html", magic=magic)
+    """搜索/浏览主页 → 重定向到 SPA."""
+    return redirect("/app#browse", code=302)
 
 
 # ============================================================

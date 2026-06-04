@@ -21,8 +21,8 @@ bp = Blueprint("favorites", __name__, url_prefix="/favorites")
 
 @bp.route("/")
 def index():
-    """书签管理页面."""
-    return render_template("favorites.html")
+    """书签管理页面 → 重定向到 SPA."""
+    return redirect("/app#favorites", code=302)
 
 
 # ============================================================

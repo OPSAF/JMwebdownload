@@ -40,8 +40,20 @@ def extract_album_id(text: str) -> str | None:
 _env_root = os.environ.get("JMD_ROOT")
 PROJECT_ROOT = Path(_env_root) if _env_root else Path(__file__).resolve().parent.parent.parent
 
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yml"
-DEFAULT_DOWNLOAD_DIR = PROJECT_ROOT / "downloads"
+# 配置文件路径（支持环境变量覆盖）
+# 优先使用 JMD_CONFIG_DIR 指定的目录，否则使用项目根目录
+_config_dir_env = os.environ.get("JMD_CONFIG_DIR")
+if _config_dir_env:
+    DEFAULT_CONFIG_PATH = Path(_config_dir_env) / "config.yml"
+else:
+    DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yml"
+
+# 下载目录（支持环境变量覆盖）
+_download_dir_env = os.environ.get("JMD_DOWNLOAD_DIR")
+if _download_dir_env:
+    DEFAULT_DOWNLOAD_DIR = Path(_download_dir_env)
+else:
+    DEFAULT_DOWNLOAD_DIR = PROJECT_ROOT / "downloads"
 
 # 线程本地存储，每个线程持有独立的 option/client
 _tls = threading.local()
@@ -59,8 +71,33 @@ def get_download_dir() -> str:
 
 def _ensure_default_config() -> str:
     """确保默认配置文件存在，不存在则创建一个."""
+    global DEFAULT_CONFIG_PATH, DEFAULT_DOWNLOAD_DIR
+    
     config_path = get_default_config_path()
     download_dir = get_download_dir()
+    
+    # 检查配置目录是否可写
+    config_dir = os.path.dirname(config_path)
+    if not os.access(config_dir, os.W_OK):
+        # 尝试使用用户主目录
+        user_home = os.path.expanduser("~")
+        jmd_dir = os.path.join(user_home, ".jm_downloader")
+        if not os.path.exists(jmd_dir):
+            try:
+                os.makedirs(jmd_dir)
+            except Exception:
+                # 用户目录也不可写，使用临时目录
+                import tempfile
+                jmd_dir = tempfile.mkdtemp(prefix="jm_downloader_")
+        
+        DEFAULT_CONFIG_PATH = Path(jmd_dir) / "config.yml"
+        DEFAULT_DOWNLOAD_DIR = Path(jmd_dir) / "downloads"
+        config_path = str(DEFAULT_CONFIG_PATH)
+        download_dir = str(DEFAULT_DOWNLOAD_DIR)
+    
+    # 确保下载目录存在
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir, exist_ok=True)
     
     if not os.path.exists(config_path):
         default_option = JmOption.default()

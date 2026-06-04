@@ -9,6 +9,7 @@ from datetime import datetime
 from flask import (
     Blueprint, render_template, request, jsonify,
     send_file, send_from_directory, current_app, abort, url_for,
+    redirect,
 )
 
 from ..services.jm_client import get_download_dir, get_option

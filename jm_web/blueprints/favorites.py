@@ -3,7 +3,7 @@
 import csv
 import io
 
-from flask import Blueprint, render_template, request, jsonify, Response
+from flask import Blueprint, render_template, request, jsonify, Response, redirect
 
 from ..services.bookmarks import (
     get_all_bookmarks,

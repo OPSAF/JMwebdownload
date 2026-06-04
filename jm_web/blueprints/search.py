@@ -2,7 +2,7 @@
 
 import math
 
-from flask import Blueprint, render_template, request, jsonify, current_app
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect
 
 from ..services.jm_client import get_client, get_option, get_magic_constants, extract_album_id
 

@@ -3,7 +3,7 @@
 import json
 import time
 
-from flask import Blueprint, render_template, request, jsonify, Response, current_app
+from flask import Blueprint, render_template, request, jsonify, Response, current_app, redirect
 
 from ..services.jm_client import extract_album_id
 from ..services.downloader import (

@@ -1,103 +1,76 @@
 <!-- 任务列表 (HTMX partial, 每2秒轮询) -->
 {% if tasks %}
-<div class="row g-2">
-    {% for task in tasks %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card bg-dark border-secondary h-100 task-card"
-             id="task-{{ task.task_id }}"
-             x-data="taskCard('{{ task.task_id }}')"
-             x-init="watch()">
-            <div class="card-body py-2 px-3">
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                    <div class="text-truncate me-2">
-                        <small class="text-info fw-bold">JM{{ task.album_id }}</small>
-                        {% if task.title and task.title != task.album_id %}
-                        <small class="text-light d-block text-truncate" style="max-width: 200px">{{ task.title }}</small>
-                        {% endif %}
-                    </div>
-                    <span class="badge
-                        {{ 'bg-warning text-dark' if task.status == 'pending' }}
-                        {{ 'bg-info text-dark' if task.status == 'running' }}
-                        {{ 'bg-primary' if task.status == 'processing' }}
-                        {{ 'bg-success' if task.status == 'completed' }}
-                        {{ 'bg-danger' if task.status == 'failed' }}
-                        {{ 'bg-secondary' if task.status == 'cancelled' }}
-                    ">
-                        {{ {
-                            'pending': '等待',
-                            'running': '初始化',
-                            'processing': '下载中',
-                            'completed': '完成',
-                            'failed': '失败',
-                            'cancelled': '已取消',
-                        }.get(task.status, task.status) }}
-                    </span>
-                </div>
-
-                <!-- 进度条 -->
-                {% if task.status in ('processing', 'completed') and task.total_images > 0 %}
-                <div class="progress mb-1" style="height: 6px">
-                    <div class="progress-bar
-                        {{ 'bg-success' if task.status == 'completed' else 'progress-bar-striped progress-bar-animated bg-info' }}"
-                        style="width: {{ task.image_percent }}%"
-                        role="progressbar">
-                    </div>
-                </div>
-                <small class="text-secondary">
-                    {{ task.current_image }}/{{ task.total_images }} 图片
-                    ({{ task.current_photo }}/{{ task.total_photos }} 章)
-                    — {{ task.image_percent }}%
-                </small>
-                {% elif task.status in ('running') %}
-                <div class="progress mb-1" style="height: 6px">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
-                         style="width: 100%"></div>
-                </div>
-                <small class="text-secondary">{{ task.message or '准备中...' }}</small>
-                {% elif task.status == 'pending' %}
-                <small class="text-secondary">等待执行...</small>
-                {% elif task.status == 'failed' %}
-                <small class="text-danger">{{ task.error[:80] or '下载失败' }}</small>
-                {% elif task.status == 'completed' %}
-                <small class="text-success">✅ {{ task.message or '下载完成' }}</small>
-                {% elif task.status == 'cancelled' %}
-                <small class="text-secondary">⏹️ 已取消</small>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.65rem">
+{% for task in tasks %}
+<div class="jm-card task-card" id="task-{{ task.task_id }}" x-data="taskCard('{{ task.task_id }}')" x-init="watch()">
+    <div class="jm-card-body" style="padding:.85rem 1rem;">
+        <!-- 头部：ID + 状态 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+            <div style="min-width:0;flex:1;margin-right:.5rem">
+                <span class="badge-id">JM{{ task.album_id }}</span>
+                {% if task.title and task.title != task.album_id %}
+                <div style="font-size:.82rem;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px" title="{{ task.title }}">{{ task.title }}</div>
                 {% endif %}
-
-                <!-- 当前章节 -->
-                {% if task.current_photo_title %}
-                <small class="text-muted d-block text-truncate mt-1">{{ task.current_photo_title }}</small>
-                {% endif %}
-
-                <!-- 操作按钮 -->
-                <div class="mt-2 d-flex gap-1">
-                    {% if task.status in ('pending', 'running', 'processing') %}
-                    <button class="btn btn-outline-warning btn-sm"
-                            onclick="fetch('/download/api/tasks/{{ task.task_id }}/cancel', {method:'POST'}).then(()=>htmx.trigger('#task-list-container','htmx-get'))">
-                        取消
-                    </button>
-                    {% endif %}
-                    {% if task.status in ('completed', 'failed', 'cancelled') %}
-                    <button class="btn btn-outline-danger btn-sm"
-                            onclick="fetch('/download/api/tasks/{{ task.task_id }}', {method:'DELETE'}).then(()=>htmx.trigger('#task-list-container','htmx-get'))">
-                        清除
-                    </button>
-                    {% endif %}
-                    {% if task.status == 'completed' %}
-                    <a href="{{ url_for('files.index') }}" class="btn btn-outline-info btn-sm">
-                        查看文件
-                    </a>
-                    {% endif %}
-                </div>
             </div>
+            <span class="status-badge status-{{ task.status }}">
+                {{ {'pending':'等待中','running':'初始化','processing':'下载中','completed':'已完成','failed':'失败','cancelled':'已取消'}.get(task.status,task.status) }}
+            </span>
+        </div>
+
+        <!-- 进度条 -->
+        {% if task.status in ('processing','completed') and task.total_images > 0 %}
+        <div class="progress-custom" style="margin-bottom:.35rem">
+            <div class="progress-bar-custom
+                {% if task.status == 'completed' %}style='background:var(--success);width:{{ task.image_percent }}%'
+                {% else %}progress-bar-animated-custom style='background:var(--accent);width:{{ task.image_percent }}%'
+                {% endif %}"></div>
+        </div>
+        <div style="font-size:.76rem;color:var(--fg-muted);display:flex;justify-content:space-between">
+            <span>{{ task.current_image }}/{{ task.total_images }} 张</span>
+            <span>{{ task.image_percent }}%</span>
+        </div>
+        {% elif task.status == 'running' %}
+        <div class="progress-custom" style="margin-bottom:.35rem">
+            <div class="progress-bar-custom progress-bar-animated-custom" style="background:var(--accent);width:100%"></div>
+        </div>
+        <div style="font-size:.76rem;color:var(--fg-muted)">{{ task.message or '准备中...' }}</div>
+        {% elif task.status == 'pending' %}
+        <div style="font-size:.76rem;color:var(--fg-dim)">排队等待执行...</div>
+        {% elif task.status == 'failed' %}
+        <div style="font-size:.76rem;color:var(--danger);margin-top:.2rem">{{ (task.error or '下载失败')[:80] }}</div>
+        {% elif task.status == 'completed' %}
+        <div style="font-size:.76rem;color:var(--success);margin-top:.2rem">{{ task.message or '下载完成' }}</div>
+        {% elif task.status == 'cancelled' %}
+        <div style="font-size:.76rem;color:var(--fg-dim)">已取消</div>
+        {% endif %}
+
+        <!-- 当前章节 -->
+        {% if task.current_photo_title %}
+        <div style="font-size:.73rem;color:var(--fg-dim);margin-top:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ task.current_photo_title }}</div>
+        {% endif %}
+
+        <!-- 操作按钮 -->
+        <div style="margin-top:.7rem;display:flex;gap:.3rem">
+            {% if task.status in ('pending','running','processing') %}
+            <button class="btn btn-outline-warning btn-sm"
+                    onclick="fetch('/download/api/tasks/{{ task.task_id }}/cancel',{method:'POST'}).then(()=>htmx.trigger('#task-list-container','htmx-get'))">取消</button>
+            {% endif %}
+            {% if task.status in ('completed','failed','cancelled') %}
+            <button class="btn btn-outline-secondary btn-sm"
+                    onclick="fetch('/download/api/tasks/{{ task.task_id }}',{method:'DELETE'}).then(()=>htmx.trigger('#task-list-container','htmx-get'))">清除</button>
+            {% endif %}
+            {% if task.status == 'completed' %}
+            <a href="{{ url_for('files.index') }}" class="btn btn-outline-info btn-sm">查看文件</a>
+            {% endif %}
         </div>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
 </div>
 {% else %}
-<div class="text-center py-5 text-secondary">
-    <i class="bi bi-inbox" style="font-size: 3rem"></i>
-    <p class="mt-2">暂无下载任务</p>
-    <small>在上方输入本子ID开始下载</small>
+<div class="empty-state">
+    <i class="bi bi-inbox empty-icon"></i>
+    <p class="empty-text">暂无下载任务</p>
+    <p class="empty-hint">在上方输入本子 ID 开始下载</p>
 </div>
 {% endif %}

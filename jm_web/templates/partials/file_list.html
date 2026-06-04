@@ -2,15 +2,13 @@
 
 <!-- 面包屑 -->
 <nav aria-label="breadcrumb" class="mb-2">
-    <ol class="breadcrumb small">
+    <ol class="breadcrumb" style="font-size:.82rem;margin-bottom:0">
         {% for crumb in breadcrumbs %}
-        <li class="breadcrumb-item {{ 'active text-light' if loop.last else '' }}">
+        <li class="breadcrumb-item {{ 'active' if loop.last else '' }}">
             {% if not loop.last %}
-            <a href="#" class="text-info"
+            <a href="#"
                hx-get="{{ url_for('files.browse', subpath=crumb.path) }}"
-               hx-target="#file-tree" hx-swap="innerHTML">
-                {{ crumb.name }}
-            </a>
+               hx-target="#file-tree" hx-swap="innerHTML">{{ crumb.name }}</a>
             {% else %}
             {{ crumb.name }}
             {% endif %}
@@ -20,8 +18,9 @@
 </nav>
 
 {% if parent_path is not none %}
-<div class="mb-1">
-    <a href="#" class="text-secondary text-decoration-none"
+<div style="margin-bottom:.5rem">
+    <a href="#"
+       style="font-size:.82rem;color:var(--fg-muted);text-decoration:none!important;display:inline-flex;align-items:center;gap:4px"
        hx-get="{{ url_for('files.browse', subpath=parent_path) }}"
        hx-target="#file-tree" hx-swap="innerHTML">
         <i class="bi bi-arrow-left"></i> 返回上级
@@ -30,90 +29,72 @@
 {% endif %}
 
 {% if entries %}
-<div class="list-group list-group-flush rounded">
-    {% for entry in entries %}
-    {% if entry.is_dir %}
-    <!-- 目录 -->
-    <a href="#"
-       class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center file-row"
-       hx-get="{{ url_for('files.browse', subpath=entry.path) }}"
-       hx-target="#file-tree" hx-swap="innerHTML">
-        <div>
-            <i class="bi bi-folder-fill text-warning me-2"></i>
-            <span>{{ entry.name }}</span>
-        </div>
-        <span class="text-secondary small">{{ entry.mtime }}</span>
-    </a>
-    {% else %}
-    <!-- 文件 -->
-    <div class="list-group-item bg-dark-subtle text-light border-secondary d-flex justify-content-between align-items-center file-row">
-        <div>
-            {% if entry.is_image %}
-            <i class="bi bi-file-image text-info me-2"></i>
-            {% elif entry.is_pdf %}
-            <i class="bi bi-file-pdf text-danger me-2"></i>
-            {% elif entry.is_zip %}
-            <i class="bi bi-file-zip text-warning me-2"></i>
-            {% else %}
-            <i class="bi bi-file text-secondary me-2"></i>
-            {% endif %}
-            <span>{{ entry.name }}</span>
-            <small class="text-secondary ms-2">{{ entry.size_human }}</small>
-        </div>
-        <div class="btn-group btn-group-sm">
-            {% if entry.is_image %}
-            <a href="{{ url_for('files.serve_file', filepath=entry.path) }}" target="_blank"
-               class="btn btn-outline-info btn-sm" title="查看原图">
-                <i class="bi bi-eye"></i>
-            </a>
-            {% elif entry.is_pdf %}
-            <a href="{{ url_for('files.view_file', filepath=entry.path) }}"
-               class="btn btn-outline-info btn-sm" title="预览PDF">
-                <i class="bi bi-eye"></i>
-            </a>
-            {% elif entry.is_zip %}
-            <a href="{{ url_for('files.view_file', filepath=entry.path) }}"
-               class="btn btn-outline-info btn-sm" title="浏览ZIP">
-                <i class="bi bi-archive"></i>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('files.serve_file', filepath=entry.path) }}" download
-               class="btn btn-outline-light btn-sm" title="下载">
-                <i class="bi bi-download"></i>
-            </a>
-            <button class="btn btn-outline-danger btn-sm"
-                    onclick="deleteFile('{{ entry.path }}')" title="删除">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
+<div style="display:flex;flex-direction:column;gap:4px">
+{% for entry in entries %}
+{% if entry.is_dir %}
+<!-- 目录 -->
+<a href="#"
+   class="result-item"
+   style="cursor:pointer;text-decoration:none!important;color:inherit!important"
+   hx-get="{{ url_for('files.browse', subpath=entry.path) }}"
+   hx-target="#file-tree" hx-swap="innerHTML">
+    <div class="result-left">
+        <i class="bi bi-folder-fill" style="color:var(--warning);font-size:.95rem"></i>
+        <span class="result-title">{{ entry.name }}</span>
     </div>
-    {% endif %}
-    {% endfor %}
+    <span style="font-size:.76rem;color:var(--fg-dim);flex-shrink:0">{{ entry.mtime }}</span>
+</a>
+{% else %}
+<!-- 文件 -->
+<div class="result-item">
+    <div class="result-left">
+        {% if entry.is_image %}
+        <i class="bi bi-file-image" style="color:var(--accent);font-size:.9rem"></i>
+        {% elif entry.is_pdf %}
+        <i class="bi bi-file-pdf" style="color:var(--danger);font-size:.9rem"></i>
+        {% elif entry.is_zip %}
+        <i class="bi bi-file-zip" style="color:var(--warning);font-size:.9rem"></i>
+        {% else %}
+        <i class="bi bi-file-earmark" style="color:var(--fg-dim);font-size:.9rem"></i>
+        {% endif %}
+        <span class="result-title">{{ entry.name }}</span>
+        <span style="font-size:.73rem;color:var(--fg-dim);flex-shrink:0">{{ entry.size_human }}</span>
+    </div>
+    <div class="result-actions">
+        {% if entry.is_image %}
+        <a href="{{ url_for('files.serve_file', filepath=entry.path) }}" target="_blank"
+           class="btn btn-outline-info btn-sm" title="查看"><i class="bi bi-eye"></i></a>
+        {% elif entry.is_pdf %}
+        <a href="{{ url_for('files.view_file', filepath=entry.path) }}"
+           class="btn btn-outline-info btn-sm" title="预览"><i class="bi bi-eye"></i></a>
+        {% elif entry.is_zip %}
+        <a href="{{ url_for('files.view_file', filepath=entry.path) }}"
+           class="btn btn-outline-info btn-sm" title="浏览"><i class="bi bi-archive"></i></a>
+        {% endif %}
+        <a href="{{ url_for('files.serve_file', filepath=entry.path) }}" download
+           class="btn btn-outline-secondary btn-sm" title="下载"><i class="bi bi-download"></i></a>
+        <button class="btn btn-outline-danger btn-sm" onclick="deleteFile('{{ entry.path }}')" title="删除">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 </div>
 {% else %}
-<div class="text-center py-4 text-secondary">
-    <i class="bi bi-folder-x" style="font-size: 2rem"></i>
-    <p class="mt-2 mb-0">空目录</p>
+<div class="empty-state">
+    <i class="bi bi-folder-x empty-icon"></i>
+    <p class="empty-text">空目录</p>
+    <p class="empty-hint">下载的内容会显示在这里</p>
 </div>
 {% endif %}
 
 <script>
-function deleteFile(path) {
-    if (!confirm(`确定删除 ${path}？此操作不可撤销。`)) return;
-    fetch('/files/api/delete', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({path}),
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.message) {
-            showToast('success', data.message);
-            htmx.trigger('#file-tree', 'reload');
-        } else {
-            showToast('error', data.error);
-        }
-    })
-    .catch(e => showToast('error', '删除失败: ' + e.message));
+function deleteFile(path){
+    if(!confirm('\u786e\u5b9a\u5220\u9664\uff1f'))return;
+    fetch('/files/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:path})})
+    .then(function(r){return r.json()})
+    .then(function(d){if(d.message){showToast('success',d.message);htmx.trigger('#file-tree','reload')}else showToast('error',d.error)})
+    .catch(function(e){showToast('error','\u5220\u9664\u5931\u8d25: '+e.message)});
 }
 </script>

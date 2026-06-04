@@ -6,33 +6,32 @@
 <div x-data="downloadManager()" x-init="init()">
 
     <!-- 页面标题 -->
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div style="width:4px;height:28px;border-radius:2px;background:linear-gradient(180deg,var(--green),#58a6ff)"></div>
-        <h2 class="mb-0" style="font-size:1.35rem;font-weight:700">下载管理</h2>
-        <span class="text-muted text-sm ms-auto">创建任务 & 追踪进度</span>
+    <div class="page-header">
+        <div class="page-header-accent" style="background:linear-gradient(180deg,var(--success),var(--accent))"></div>
+        <h2><i class="bi bi-download me-1" style="color:var(--success)"></i>下载管理</h2>
+        <span class="page-header-desc">创建任务 & 追踪进度</span>
     </div>
 
     <!-- 新建任务 -->
-    <div class="card mb-3" x-data="{ showAdvanced: false }">
-        <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
-            <span style="font-weight:600;font-size:.92rem"><i class="bi bi-plus-circle text-success me-1"></i>新建下载任务</span>
-            <button class="btn btn-sm btn-outline-secondary" @click="showAdvanced = !showAdvanced">
+    <div class="jm-card" style="margin-bottom:1.25rem" x-data="{ showAdvanced: false }">
+        <div class="jm-card-header">
+            <span class="jm-card-title"><i class="bi bi-plus-circle" style="color:var(--success)"></i> 新建下载任务</span>
+            <button class="btn btn-outline-secondary btn-sm" @click="showAdvanced = !showAdvanced">
                 <i class="bi bi-sliders me-1"></i><span x-text="showAdvanced ? '收起' : '高级选项'"></span>
             </button>
         </div>
-        <div class="card-body">
+        <div class="jm-card-body">
             <form @submit.prevent="submitDownload()">
-                <!-- 主行 -->
                 <div class="row g-2 align-items-end mb-0">
                     <div class="col-md-4 col-lg-5">
-                        <label class="form-label text-muted text-xs">本子ID</label>
-                        <input type="text" class="form-control bg-dark-subtle"
+                        <label class="form-label">本子ID</label>
+                        <input type="text" class="form-control"
                                placeholder="输入 ID 或粘贴含 ID 的文本" x-model="albumId" required
                                @paste="handlePaste($event)">
-                        <small class="text-muted mt-1 d-block">支持自动提取文本中的数字 ID</small>
+                        <small style="display:block;margin-top:3px;font-size:.75rem;color:var(--fg-dim)">支持自动提取文本中的数字 ID</small>
                     </div>
                     <div class="col-auto">
-                        <label class="form-label text-muted text-xs d-block">导出格式</label>
+                        <label class="form-label">导出格式</label>
                         <div class="d-flex gap-2 pt-1">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" value="pdf" x-model="exportFormats">
@@ -49,8 +48,8 @@
                         </div>
                     </div>
                     <div class="col-auto">
-                        <label class="form-label text-muted text-xs d-block">图片格式</label>
-                        <select class="form-select form-select-sm bg-dark-subtle" style="width:95px" x-model="imageSuffix">
+                        <label class="form-label">图片格式</label>
+                        <select class="form-select form-select-sm" style="width:95px" x-model="imageSuffix">
                             <option value="">默认</option>
                             <option value=".jpg">JPG</option>
                             <option value=".png">PNG</option>
@@ -58,9 +57,8 @@
                         </select>
                     </div>
                     <div class="col-auto">
-                        <label class="form-label text-muted text-xs d-block">并发数</label>
-                        <input type="number" class="form-control form-control-sm bg-dark-subtle"
-                               style="width:75px" x-model="threadCount" placeholder="默认" min="1" max="50">
+                        <label class="form-label">并发数</label>
+                        <input type="number" class="form-control form-control-sm" style="width:75px" x-model="threadCount" placeholder="默认" min="1" max="50">
                     </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-success btn-sm" :disabled="submitting" style="min-width:110px;padding:.45rem 1rem;">
@@ -71,19 +69,19 @@
                 </div>
 
                 <!-- 高级选项 -->
-                <div x-show="showAdvanced" class="mt-3 pt-3 border-top border-secondary">
+                <div x-show="showAdvanced" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-subtle)">
                     <div class="row g-2">
                         <div class="col-md-4">
-                            <label class="form-label text-muted text-xs">登录用户名（敏感本子需要）</label>
-                            <input type="text" class="form-control form-control-sm bg-dark-subtle" placeholder="禁漫账号" x-model="loginUsername">
+                            <label class="form-label">登录用户名（敏感本子需要）</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="禁漫账号" x-model="loginUsername">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label text-muted text-xs">登录密码</label>
-                            <input type="password" class="form-control form-control-sm bg-dark-subtle" placeholder="禁漫密码" x-model="loginPassword">
+                            <label class="form-label">登录密码</label>
+                            <input type="password" class="form-control form-control-sm" placeholder="禁漫密码" x-model="loginPassword">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label text-muted text-xs">代理地址</label>
-                            <input type="text" class="form-control form-control-sm bg-dark-subtle" placeholder="如 127.0.0.1:7890" x-model="proxy">
+                            <label class="form-label">代理地址</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="如 127.0.0.1:7890" x-model="proxy">
                         </div>
                     </div>
                 </div>
@@ -92,10 +90,7 @@
     </div>
 
     <!-- 任务列表 (HTMX 轮询) -->
-    <div id="task-list-container"
-         hx-get="/download/partial/task-list"
-         hx-trigger="every 2s"
-         hx-swap="innerHTML">
+    <div id="task-list-container" hx-get="/download/partial/task-list" hx-trigger="every 2s" hx-swap="innerHTML">
         {% include "partials/task_list.html" %}
     </div>
 
@@ -104,55 +99,23 @@
 
 {% block scripts %}
 <script>
-function downloadManager() {
+function downloadManager(){
     return {
-        albumId: '',
-        exportFormats: [],
-        imageSuffix: '',
-        threadCount: null,
-        loginUsername: '',
-        loginPassword: '',
-        proxy: '',
-        submitting: false,
-
-        init() { if (!window.TaskManager) window.TaskManager = new TaskTracker(); },
-
-        handlePaste(e) {
-            setTimeout(function () {
-                var t = this.albumId;
-                var m = t.match(/(\d{5,7})/);
-                if (m && m[1] !== t) this.albumId = m[1];
-            }.bind(this), 50);
-        },
-
-        async submitDownload() {
-            if (!this.albumId.trim()) return;
-            var m = this.albumId.trim().match(/\d{5,7}/);
-            var id = m ? m[0] : this.albumId.trim();
-            this.submitting = true;
-            try {
-                var r = await fetch('/download/api/start', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        album_id: id, image_suffix: this.imageSuffix || null,
-                        thread_count: this.threadCount || null,
-                        export_formats: this.exportFormats.length > 0 ? this.exportFormats : null,
-                        login_username: this.loginUsername || null,
-                        login_password: this.loginPassword || null,
-                        proxy: this.proxy || null
-                    })
-                });
-                var data = await r.json();
-                if (data.task_id) {
-                    showToast('success', '\u4efb\u52a1\u5df2\u521b\u5efa: ' + data.task_id);
-                    window.TaskManager.startTracking(data.task_id, id);
-                    this.albumId = ''; this.exportFormats = [];
-                } else {
-                    showToast('error', data.error || '\u521b\u5efa\u5931\u8d25');
-                }
-            } catch (e) {
-                showToast('error', '\u8bf7\u6c42\u5931\u8d25: ' + e.message);
-            } finally { this.submitting = false; }
+        albumId:'', exportFormats:[], imageSuffix:'', threadCount:null,
+        loginUsername:'', loginPassword:'', proxy:'', submitting:false,
+        init(){ if(!window.TaskManager) window.TaskManager=new TaskTracker(); },
+        handlePaste(e){ setTimeout(function(){var t=this.albumId,m=t.match(/(\d{5,7})/);if(m&&m[1]!==t)this.albumId=m[1];}.bind(this),50); },
+        async submitDownload(){
+            if(!this.albumId.trim())return;
+            var m=this.albumId.trim().match(/\d{5,7}/),id=m?m[0]:this.albumId.trim();
+            this.submitting=true;
+            try{
+                var r=await fetch('/download/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({album_id:id,image_suffix:this.imageSuffix||null,thread_count:this.threadCount||null,export_formats:this.exportFormats.length>0?this.exportFormats:null,login_username:this.loginUsername||null,login_password:this.loginPassword||null,proxy:this.proxy||null})});
+                var d=await r.json();
+                if(d.task_id){showToast('success','\u4efb\u52a1\u5df2\u521b\u5efa: '+d.task_id);window.TaskManager.startTracking(d.task_id,id);this.albumId='';this.exportFormats=[];}
+                else showToast('error',d.error||'\u521b\u5efa\u5931\u8d25');
+            }catch(e){showToast('error','\u8bf7\u6c82\u5931\u8d25: '+e.message);}
+            finally{this.submitting=false;}
         }
     };
 }

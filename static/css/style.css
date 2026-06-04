@@ -1549,6 +1549,7 @@ body.page-index .main-content {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    position: relative; /* 新增：为子元素的 absolute 定位提供上下文 */
 }
 
 

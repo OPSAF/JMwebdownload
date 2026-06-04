@@ -140,7 +140,7 @@
                     <span class="hot-rank" :class="{ 'top-three': index < 3 }" x-text="index + 1"></span>
                     <div class="hot-info">
                         <span class="hot-title" x-text="item.title"></span>
-                        <span class="hot-id">JM{{ item.id }}</span>
+                        <span class="hot-id" x-text="'JM' + item.id"></span>
                     </div>
                     <div class="hot-actions">
                         <a :href="'/browse/album/' + item.id" class="btn btn-sm btn-outline-info">

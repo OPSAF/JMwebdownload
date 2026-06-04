@@ -12,111 +12,28 @@ from jmcomic import (
     JmHtmlClient,
     JmApiClient,
     JmMagicConstants,
+    JmcomicText,
     create_option_by_file,
 )
 
-# 中文数字映射
-ZH_DIGIT_MAP = {
-    '零': 0, '一': 1, '二': 2, '三': 3, '四': 4,
-    '五': 5, '六': 6, '七': 7, '八': 8, '九': 9,
-    '十': 10,
-}
 
-
-def parse_chinese_number(text: str) -> str | None:
-    """将中文数字转换为阿拉伯数字。
+def extract_album_id(text: str) -> str | None:
+    """从文本中提取本子 ID。
     
-    支持: 三十八 -> 38, 四三八六九六 -> 438696, 一百二十三 -> 123
+    使用 jmcomic 包的正则表达式提取所有连续数字并连接。
+    例如: "12级加里奥打出6417" -> "126417"
     
     Returns:
-        转换后的阿拉伯数字字符串，如果无法转换则返回 None
+        提取到的 ID 字符串，如果找不到则返回 None
     """
     if not text:
         return None
     
-    # 检查是否包含中文字符
-    zh_chars = set(text) & set(ZH_DIGIT_MAP.keys())
-    if not zh_chars:
-        return None
-    
-    # 检查是否全是中文数字相关字符（允许数字、空格、连读词如"零"/"十"/"百"）
-    # 允许的字符: 中文数字 + 阿拉伯数字
-    pattern = re.compile(r'^[\d零一二三四五六七八九十百]+$')
-    if not pattern.match(text):
-        # 如果包含其他字符，尝试提取纯中文数字部分
-        digits = re.findall(r'[\d零一二三四五六七八九十百]+', text)
-        if digits:
-            text = digits[0]
-        else:
-            return None
-    
-    try:
-        result = _convert_zh_number(text)
-        return str(result) if result is not None else None
-    except Exception:
-        return None
-
-
-def _convert_zh_number(text: str) -> int | None:
-    """内部函数：转换中文数字为整数
-    
-    支持两种读法：
-    - 位值法: 一百二十三 -> 123, 三十八 -> 38
-    - 连读法: 四三八六九六 -> 438696
-    """
-    if text.isdigit():
-        return int(text)
-    
-    # 连读法判断：如果只有数字字符（0-9），没有十、百等单位词
-    has_unit = any(c in text for c in ('十', '百'))
-    
-    if not has_unit:
-        # 连读法: 四三八六九六 -> 438696
-        result = ''
-        for char in text:
-            if char == '零':
-                result += '0'
-            else:
-                digit = ZH_DIGIT_MAP.get(char)
-                if digit is not None:
-                    result += str(digit)
-        return int(result) if result else 0
-    
-    # 位值法处理：使用栈来解析
-    # 算法：逐字符扫描，遇到数字则入栈，遇到单位词则出栈计算
-    stack = []  # 存储累积的数字
-    result = 0
-    temp_num = 0
-    
-    for char in text:
-        if char == '零':
-            continue
-        elif char == '十':
-            # 把 temp_num * 10 入栈
-            stack.append(temp_num * 10 if temp_num else 10)
-            temp_num = 0
-        elif char == '百':
-            # 把 temp_num * 100 入栈
-            stack.append(temp_num * 100 if temp_num else 100)
-            temp_num = 0
-        elif char in ZH_DIGIT_MAP:
-            temp_num = temp_num * 10 + ZH_DIGIT_MAP[char]
-    
-    # 最后一个数字也要入栈
-    if temp_num > 0:
-        stack.append(temp_num)
-    
-    # 累加所有栈中的数字
-    return sum(stack)
-
-
-def _zh_to_digit(text: str) -> int:
-    """将纯中文数字串转换为整数"""
-    if not text:
-        return 0
-    if text.isdigit():
-        return int(text)
-    return _convert_zh_number(text)
+    # 使用正则提取所有连续数字
+    numbers = re.findall(r'\d+', text)
+    if numbers:
+        return ''.join(numbers)
+    return None
 
 # 项目根目录（支持环境变量覆盖）
 # 在服务器部署时，可以通过环境变量指定路径
